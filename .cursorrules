@@ -1,0 +1,268 @@
+# GatekeeperHQ - Cursor Rules
+
+## Project Overview
+This is a RBAC (Role-Based Access Control) Admin Panel with:
+- **Backend**: .NET 8 ASP.NET Core Web API (in `server/` directory)
+- **Frontend**: Next.js 14 with TypeScript (in `client/` directory)
+- **Database**: PostgreSQL
+- **OS**: Windows 10
+
+## Project Structure
+- `server/` - .NET backend solution with layered architecture
+  - `GatekeeperHQ.API/` - Controllers, DTOs, Program.cs
+  - `GatekeeperHQ.Application/` - Business logic services
+  - `GatekeeperHQ.Domain/` - Entities, constants (Permissions)
+  - `GatekeeperHQ.Infrastructure/` - EF Core, JWT, Auth
+- `client/` - Next.js frontend with App Router
+  - `app/` - Next.js App Router pages and layouts
+  - `lib/` - API client, auth utilities
+  - `types/` - TypeScript type definitions
+
+## Windows 10 Specific Considerations
+
+### File Paths
+- Use forward slashes `/` in code (works on Windows with .NET/Node)
+- Use `Path.Combine()` in C# for file paths
+- Be aware of case-insensitive file system (but keep casing consistent)
+
+### Line Endings
+- Git should handle CRLF/LF conversion automatically
+- Use `.editorconfig` for consistent line endings
+
+### Commands
+- Use PowerShell or Git Bash for scripts
+- Docker commands work the same on Windows
+- Use `dotnet` CLI (works on Windows)
+- Use `npm` (works on Windows)
+
+## .NET / C# Conventions
+
+### Code Style
+- Use `PascalCase` for classes, methods, properties, constants
+- Use `camelCase` for local variables and parameters
+- Use `_camelCase` for private fields
+- Use `UPPER_CASE` for constants (but Permissions class uses PascalCase for consistency)
+
+### Architecture Layers
+- **API Layer**: Controllers, DTOs only. No business logic.
+- **Application Layer**: Services contain business logic. DTOs for service layer.
+- **Domain Layer**: Entities, constants. No dependencies on other layers.
+- **Infrastructure Layer**: EF Core, JWT, external services. Can depend on Domain and Application.
+
+### Entity Framework Core
+- Always use `Include()` for related entities when needed
+- Use async/await for all database operations
+- Use `FirstOrDefaultAsync()` instead of `FirstAsync()` when entity might not exist
+- Use `SaveChangesAsync()` for persistence
+- Configure relationships in `OnModelCreating()` in DbContext
+
+### Dependency Injection
+- Register services in `Program.cs`
+- Use constructor injection
+- Register as `Scoped` for DbContext and services
+- Register as `Singleton` for JwtService (stateless)
+
+### Authorization
+- Use `[Authorize(Policy = Permissions.Xxx)]` on controllers/actions
+- Policies are registered in `Program.cs` using `PermissionRequirement`
+- JWT tokens include permissions as claims
+- Always check permissions on backend (frontend checks are UX only)
+
+### Error Handling
+- Return appropriate HTTP status codes (400, 401, 403, 404, 409, 500)
+- Use consistent error response format: `{ message: "..." }`
+- Validate DTOs using Data Annotations or FluentValidation
+- Throw `InvalidOperationException` for business rule violations
+
+### Security
+- Never log passwords or tokens
+- Use BCrypt for password hashing (already implemented)
+- JWT tokens expire after 30 minutes (configurable)
+- Always validate user input
+- Use parameterized queries (EF Core does this automatically)
+
+## Next.js / TypeScript / React Conventions
+
+### File Naming
+- Use `kebab-case` for file names: `user-list.tsx`, `auth-service.ts`
+- Use `PascalCase` for component files: `UserList.tsx` (but we're using kebab-case for consistency)
+- Use `.ts` for utilities, `.tsx` for components
+
+### TypeScript
+- Always use TypeScript types/interfaces (no `any` unless absolutely necessary)
+- Define API types in `types/api.ts` matching backend DTOs
+- Use `type` for object shapes, `interface` for extensible contracts
+- Use `z.infer<typeof schema>` for form types from Zod schemas
+
+### React Components
+- Use functional components with hooks
+- Use `'use client'` directive for client components
+- Use `useQuery` and `useMutation` from TanStack Query for data fetching
+- Use `useForm` from React Hook Form with Zod resolver for forms
+- Extract reusable logic into custom hooks (e.g., `useAuth`)
+
+### State Management
+- Use TanStack Query for server state (caching, refetching)
+- Use React state (`useState`) for local UI state
+- Use React Hook Form for form state
+- Use Context API for auth state (`AuthProvider`)
+
+### API Client
+- All API calls go through `lib/api/client.ts` (axios instance)
+- JWT token is automatically added to requests via interceptor
+- Handle 401 errors by redirecting to login
+- Use typed API functions in `lib/api/*.ts` files
+
+### Permission Checks
+- Use `canAccess(user, permission)` utility function
+- Check permissions before rendering UI elements
+- Always verify permissions on backend (frontend is UX only)
+- Show "Access Denied" message if user lacks permission
+
+### Styling
+- Use Tailwind CSS utility classes
+- Use `cn()` utility from `lib/utils.ts` for conditional classes
+- Follow responsive design patterns (mobile-first)
+- Use consistent spacing and color scheme
+
+## Code Quality
+
+### General
+- Write self-documenting code with clear variable names
+- Add comments for complex business logic
+- Keep functions small and focused (single responsibility)
+- Avoid deep nesting (max 3-4 levels)
+
+### Error Messages
+- Provide clear, user-friendly error messages
+- Log technical details server-side, show user-friendly messages client-side
+- Use consistent error format across API
+
+### Performance
+- Use `useMemo` and `useCallback` sparingly (only when needed)
+- Implement proper loading states
+- Use TanStack Query's caching to avoid unnecessary requests
+- Lazy load routes if needed (not implemented yet)
+
+## Git Commit Messages
+
+Follow conventional commits:
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `perf:` - Performance improvement
+- `docs:` - Documentation changes
+- `style:` - Formatting, missing semicolons, etc.
+- `refactor:` - Code refactoring
+- `test:` - Adding tests
+- `chore:` - Maintenance tasks
+
+Example: `feat: add user role assignment in edit form`
+
+## Testing Considerations
+
+### Backend
+- Test authorization policies work correctly
+- Test permission checks on endpoints
+- Test password hashing and JWT generation
+- Test database operations (use in-memory DB for unit tests if needed)
+
+### Frontend
+- Test permission-based UI visibility
+- Test form validation
+- Test API error handling
+- Test authentication flow (login/logout)
+
+## Database
+
+### Migrations
+- Always create migrations for schema changes
+- Use descriptive migration names
+- Test migrations on development before applying to production
+- Never edit existing migrations (create new ones)
+
+### Seeding
+- Seed data runs automatically on startup (DatabaseSeeder)
+- Includes: permissions, admin role, admin user
+- Admin credentials: `admin@gatekeeperhq.com` / `Admin123!`
+
+## Development Workflow
+
+### Starting the Project
+1. Start PostgreSQL: `docker-compose up -d`
+2. Backend: `cd server && dotnet run --project GatekeeperHQ.API`
+3. Frontend: `cd client && npm run dev`
+
+### Making Changes
+1. Backend changes: Use `dotnet watch run` for auto-reload
+2. Frontend changes: Next.js hot-reloads automatically
+3. Database changes: Create migration, then apply
+
+### Debugging
+- Backend: Use Visual Studio or VS Code debugger
+- Frontend: Use browser DevTools and React DevTools
+- API: Use Swagger UI at `http://localhost:5000/swagger`
+
+## Common Patterns
+
+### Creating a New Feature
+1. **Backend**: Add entity → Add service → Add controller → Add DTOs
+2. **Frontend**: Add API function → Add types → Add page/component
+3. **Permissions**: Add to `Permissions.cs` → Register policy → Use in controller
+
+### Adding a New Permission
+1. Add constant to `GatekeeperHQ.Domain/Constants/Permissions.cs`
+2. Register policy in `Program.cs`
+3. Use `[Authorize(Policy = Permissions.Xxx)]` on endpoints
+4. Check with `canAccess(user, 'permission.key')` in frontend
+
+### Adding a New Entity
+1. Create entity in `GatekeeperHQ.Domain/Entities/`
+2. Add DbSet to `AppDbContext`
+3. Configure in `OnModelCreating()`
+4. Create migration: `dotnet ef migrations add EntityName`
+5. Apply migration: `dotnet ef database update`
+
+## Security Reminders
+
+- **Never commit**: Passwords, JWT secrets, connection strings with real credentials
+- **Always validate**: User input on both frontend and backend
+- **Always authorize**: Check permissions on every protected endpoint
+- **Use HTTPS**: In production (required for JWT)
+- **Sanitize**: User inputs before displaying (prevent XSS)
+- **Hash passwords**: Always use BCrypt (already implemented)
+
+## Performance Tips
+
+- Use `Select()` in EF Core to only fetch needed fields
+- Use pagination for large lists (not implemented yet)
+- Cache permissions in JWT (already done)
+- Use React Query's staleTime to reduce refetches
+- Lazy load heavy components if needed
+
+## Windows 10 Specific Notes
+
+- Use Git Bash or PowerShell for terminal commands
+- Docker Desktop must be running for PostgreSQL
+- .NET SDK should be in PATH (verify with `dotnet --version`)
+- Node.js should be in PATH (verify with `node --version`)
+- Use forward slashes in code paths (works on Windows)
+- Be careful with file casing (Windows is case-insensitive but Git is case-sensitive)
+
+## When Adding New Code
+
+1. **Follow existing patterns** - Look at similar files for structure
+2. **Maintain layer separation** - Don't mix concerns
+3. **Add proper error handling** - Always handle edge cases
+4. **Update types** - Keep TypeScript types in sync with backend DTOs
+5. **Test manually** - At minimum, test the happy path
+6. **Check permissions** - Ensure proper authorization
+7. **Update README** - If adding new features or changing setup
+
+## Questions to Ask Before Coding
+
+- Does this need a permission check?
+- Is this the right layer for this code?
+- Are the types consistent between frontend and backend?
+- Is error handling appropriate?
+- Is this secure? (validate, authorize, sanitize)
+- Does this follow existing patterns in the codebase?
