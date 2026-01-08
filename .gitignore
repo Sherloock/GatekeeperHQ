@@ -63,5 +63,8 @@ logs/
 .env.test.local
 .env.production.local
 
+# Production configuration files with secrets
+server/GatekeeperHQ.API/appsettings.Production.json
+
 # Script lock files
 .start-dev.lock

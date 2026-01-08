@@ -1,19 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi } from '@/lib/api/users';
 import { rolesApi } from '@/lib/api/roles';
-import { useAuth } from '@/lib/auth/useAuth';
+import { usersApi } from '@/lib/api/users';
 import { canAccess } from '@/lib/auth/canAccess';
-import { useForm } from 'react-hook-form';
+import { useAuth } from '@/lib/auth/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 const updateUserSchema = z.object({
   email: z.string().email('Invalid email address').optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
+  password: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === '' || (val.length >= 8 && val.length <= 128),
+      'Password must be between 8 and 128 characters'
+    )
+    .refine(
+      (val) =>
+        !val ||
+        val === '' ||
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(val),
+      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+    )
+    .or(z.literal('')),
   isActive: z.boolean().optional(),
   roleIds: z.array(z.number()).optional(),
 });

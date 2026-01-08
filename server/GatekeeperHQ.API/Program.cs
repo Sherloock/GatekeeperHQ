@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using AspNetCoreRateLimit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,28 +51,48 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Configure CORS
+// Configure CORS with restricted headers and methods
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowClient", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
+        var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+            ?? new[] { "http://localhost:3000", "http://localhost:3001" };
+
+        policy.WithOrigins(allowedOrigins)
+              .WithHeaders("Content-Type", "Authorization", "X-Requested-With")
+              .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
               .AllowCredentials();
     });
 });
 
 // Configure Entity Framework with PostgreSQL
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DATABASE_CONNECTION_STRING")
+    ?? throw new InvalidOperationException("Database connection string not configured. Set it in appsettings.json or DATABASE_CONNECTION_STRING environment variable.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey not configured");
-var issuer = jwtSettings["Issuer"] ?? throw new InvalidOperationException("JWT Issuer not configured");
-var audience = jwtSettings["Audience"] ?? throw new InvalidOperationException("JWT Audience not configured");
+var secretKey = jwtSettings["SecretKey"]
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+    ?? throw new InvalidOperationException("JWT SecretKey not configured. Set it in appsettings.json or JWT_SECRET_KEY environment variable.");
+
+if (string.IsNullOrWhiteSpace(secretKey) || secretKey.Length < 32)
+{
+    throw new InvalidOperationException("JWT SecretKey must be at least 32 characters long.");
+}
+
+var issuer = jwtSettings["Issuer"]
+    ?? Environment.GetEnvironmentVariable("JWT_ISSUER")
+    ?? throw new InvalidOperationException("JWT Issuer not configured");
+
+var audience = jwtSettings["Audience"]
+    ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+    ?? throw new InvalidOperationException("JWT Audience not configured");
+
 var expirationMinutes = int.Parse(jwtSettings["ExpirationMinutes"] ?? "30");
 
 builder.Services.AddAuthentication(options =>
@@ -125,16 +146,59 @@ builder.Services.AddScoped<JwtService>(sp =>
 {
     var configuration = sp.GetRequiredService<IConfiguration>();
     var jwtSettings = configuration.GetSection("Jwt");
+
+    var secretKey = jwtSettings["SecretKey"]
+        ?? Environment.GetEnvironmentVariable("JWT_SECRET_KEY")
+        ?? throw new InvalidOperationException("JWT SecretKey not configured");
+
+    var issuer = jwtSettings["Issuer"]
+        ?? Environment.GetEnvironmentVariable("JWT_ISSUER")
+        ?? throw new InvalidOperationException("JWT Issuer not configured");
+
+    var audience = jwtSettings["Audience"]
+        ?? Environment.GetEnvironmentVariable("JWT_AUDIENCE")
+        ?? throw new InvalidOperationException("JWT Audience not configured");
+
     return new JwtService(
-        jwtSettings["SecretKey"]!,
-        jwtSettings["Issuer"]!,
-        jwtSettings["Audience"]!,
+        secretKey,
+        issuer,
+        audience,
         int.Parse(jwtSettings["ExpirationMinutes"] ?? "30")
     );
 });
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+
+// Configure Rate Limiting
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(options =>
+{
+    var rateLimitConfig = builder.Configuration.GetSection("RateLimiting");
+    options.EnableEndpointRateLimiting = true;
+    options.StackBlockedRequests = false;
+    options.HttpStatusCode = 429;
+    options.RealIpHeader = "X-Real-IP";
+    options.GeneralRules = new List<RateLimitRule>
+    {
+        new RateLimitRule
+        {
+            Endpoint = "POST:/api/auth/login",
+            Period = rateLimitConfig["Window"] ?? "15m",
+            Limit = int.Parse(rateLimitConfig["PermitLimit"] ?? "5")
+        },
+        new RateLimitRule
+        {
+            Endpoint = "*",
+            Period = "1m",
+            Limit = 100
+        }
+    };
+});
+builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 
 var app = builder.Build();
 
@@ -146,6 +210,52 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline
+
+// Enforce HTTPS in production
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
+
+// Security Headers Middleware
+app.Use(async (context, next) =>
+{
+    // Remove server header
+    context.Response.Headers.Remove("Server");
+
+    // Add security headers
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+
+    // Content Security Policy
+    var csp = "default-src 'self'; " +
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+              "style-src 'self' 'unsafe-inline'; " +
+              "img-src 'self' data: https:; " +
+              "font-src 'self' data:; " +
+              "connect-src 'self'; " +
+              "frame-ancestors 'none';";
+    context.Response.Headers.Append("Content-Security-Policy", csp);
+
+    // Strict Transport Security (HSTS) - only in production
+    if (!app.Environment.IsDevelopment())
+    {
+        context.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    }
+
+    await next();
+});
+
+// Rate Limiting
+var rateLimitConfig = app.Configuration.GetSection("RateLimiting");
+if (bool.Parse(rateLimitConfig["EnableRateLimiting"] ?? "true"))
+{
+    app.UseIpRateLimiting();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
