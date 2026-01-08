@@ -58,6 +58,36 @@ A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js front
 
 ## Quick Start
 
+### Option 1: Using Development Scripts (Recommended)
+
+The easiest way to start all services is using the provided scripts:
+
+**Windows (PowerShell):**
+```powershell
+.\scripts\start-dev.ps1
+```
+
+**Windows (Command Prompt):**
+```cmd
+scripts\start-dev.bat
+```
+
+**Linux/Mac/Git Bash:**
+```bash
+./scripts/start-dev.sh
+```
+
+These scripts will automatically:
+1. Start PostgreSQL (Docker)
+2. Start the Backend API
+3. Install frontend dependencies and start the Frontend
+
+See [scripts/README.md](scripts/README.md) for detailed documentation.
+
+---
+
+### Option 2: Manual Setup
+
 ### 1. Database Setup
 
 **Option A: Using Docker (Recommended)**
