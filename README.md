@@ -1,6 +1,6 @@
 # GatekeeperHQ - RBAC Admin Panel
 
-A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js frontend and ASP.NET Core backend.
+A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js client and ASP.NET Core server.
 
 ## Features
 
@@ -31,7 +31,7 @@ A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js front
 
 ## Tech Stack
 
-### Backend
+### Server
 - .NET 8
 - ASP.NET Core Web API
 - Entity Framework Core
@@ -40,7 +40,7 @@ A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js front
 - BCrypt for password hashing
 - Swagger/OpenAPI
 
-### Frontend
+### Client
 - Next.js 14 (App Router)
 - TypeScript
 - TanStack Query
@@ -79,8 +79,8 @@ scripts\start-dev.bat
 
 These scripts will automatically:
 1. Start PostgreSQL (Docker)
-2. Start the Backend API
-3. Install frontend dependencies and start the Frontend
+2. Start the Server API
+3. Install client dependencies and start the Client
 
 See [scripts/README.md](scripts/README.md) for detailed documentation.
 
@@ -100,10 +100,10 @@ docker-compose up -d
 createdb gatekeeperhq
 ```
 
-### 2. Backend Setup
+### 2. Server Setup
 
 ```bash
-cd backend
+cd server
 
 # Restore NuGet packages
 dotnet restore
@@ -122,10 +122,10 @@ The API will be available at `http://localhost:5000` (or the port configured in 
 
 Swagger UI: `http://localhost:5000/swagger`
 
-### 3. Frontend Setup
+### 3. Client Setup
 
 ```bash
-cd frontend
+cd client
 
 # Install dependencies
 npm install
@@ -142,7 +142,7 @@ npm run dev
 pnpm dev
 ```
 
-The frontend will be available at `http://localhost:3000`.
+The client will be available at `http://localhost:3000`.
 
 ## Default Credentials
 
@@ -157,13 +157,13 @@ This user has the "Admin" role with all permissions.
 
 ```
 GatekeeperHQ/
-├── backend/
+├── server/
 │   ├── GatekeeperHQ.API/          # Presentation layer (Controllers, DTOs)
 │   ├── GatekeeperHQ.Application/   # Business logic (Services)
 │   ├── GatekeeperHQ.Domain/       # Entities and constants
 │   ├── GatekeeperHQ.Infrastructure/ # EF Core, JWT, Password hashing
 │   └── GatekeeperHQ.sln           # Solution file
-├── frontend/
+├── client/
 │   ├── app/                        # Next.js App Router
 │   ├── components/                 # UI components
 │   ├── features/                   # Feature modules
@@ -220,17 +220,17 @@ The system includes the following permissions:
 1. **Password Storage**: Passwords are hashed using BCrypt with salt
 2. **JWT Expiry**: Access tokens expire after 30 minutes (configurable)
 3. **HTTPS**: Required in production
-4. **CORS**: Configured for frontend origin only
+4. **CORS**: Configured for client origin only
 5. **Input Validation**: All DTOs validated using Data Annotations
 6. **SQL Injection**: EF Core uses parameterized queries (automatic protection)
 7. **XSS**: React escapes by default, but user inputs should be sanitized
 
 ## Development
 
-### Backend
+### Client
 
 ```bash
-cd backend
+cd server
 
 # Watch mode (auto-reload on changes)
 dotnet watch run --project GatekeeperHQ.API
@@ -242,10 +242,10 @@ dotnet ef migrations add MigrationName --project GatekeeperHQ.Infrastructure --s
 dotnet ef database update --project GatekeeperHQ.Infrastructure --startup-project GatekeeperHQ.API
 ```
 
-### Frontend
+### Client
 
 ```bash
-cd frontend
+cd client
 
 # Development server
 npm run dev
@@ -273,13 +273,13 @@ The database is automatically seeded on first run with:
 - Verify database exists: `psql -U postgres -l`
 
 ### CORS Issues
-- Ensure backend CORS is configured for frontend origin
+- Ensure server CORS is configured for client origin
 - Check `Program.cs` CORS policy
 
 ### JWT Token Issues
 - Verify JWT secret key is set in `appsettings.json`
 - Check token expiration time
-- Ensure frontend is sending token in Authorization header
+- Ensure client is sending token in Authorization header
 
 ## License
 

@@ -53,7 +53,7 @@ builder.Services.AddSwaggerGen(c =>
 // Configure CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("AllowClient", policy =>
     {
         policy.WithOrigins("http://localhost:3000", "http://localhost:3001")
               .AllowAnyHeader()
@@ -152,7 +152,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
+app.UseCors("AllowClient");
 
 app.UseAuthentication();
 app.UseAuthorization();

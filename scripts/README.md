@@ -8,8 +8,8 @@ This folder contains scripts to help you start and manage the GatekeeperHQ devel
 
 Starts all development services in a single terminal session:
 - PostgreSQL database (via Docker Compose)
-- .NET Backend API
-- Next.js Frontend
+- .NET Server API
+- Next.js Client
 
 **Usage:**
 ```bash
@@ -36,8 +36,8 @@ bash scripts/start-dev.sh
 
 Starts all development services in separate PowerShell windows:
 - PostgreSQL database (via Docker Compose)
-- .NET Backend API (new window)
-- Next.js Frontend (new window)
+- .NET Server API (new window)
+- Next.js Client (new window)
 
 **Usage:**
 ```powershell
@@ -47,7 +47,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 ```
 
 **Features:**
-- Opens separate windows for backend and frontend
+- Opens separate windows for server and client
 - Easy to view logs for each service
 - Color-coded output
 - Windows stay open after script completes
@@ -69,8 +69,8 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 Starts all development services in separate command windows:
 - PostgreSQL database (via Docker Compose)
-- .NET Backend API (new window)
-- Next.js Frontend (new window)
+- .NET Server API (new window)
+- Next.js Client (new window)
 
 **Usage:**
 ```cmd
@@ -80,7 +80,7 @@ cd scripts && start-dev.bat
 ```
 
 **Features:**
-- Opens separate windows for backend and frontend
+- Opens separate windows for server and client
 - Easy to view logs for each service
 - Works in standard Windows CMD
 - Windows stay open after script completes
@@ -97,9 +97,9 @@ cd scripts && start-dev.bat
 
 After starting the services, you can access:
 
-- **Backend API**: http://localhost:5000
+- **Server API**: http://localhost:5000
 - **Swagger UI**: http://localhost:5000/swagger
-- **Frontend**: http://localhost:3000
+- **Client**: http://localhost:3000
 
 ## Default Credentials
 
@@ -113,7 +113,7 @@ After starting the services, you can access:
 - This will stop all services and shut down PostgreSQL
 
 ### For `start-dev.ps1` and `start-dev.bat`:
-- Close the individual PowerShell/CMD windows for backend and frontend
+- Close the individual PowerShell/CMD windows for server and client
 - To stop PostgreSQL, run: `docker-compose down`
 
 ## Troubleshooting
@@ -123,8 +123,8 @@ After starting the services, you can access:
 - Verify Docker is running: `docker ps`
 
 ### Port already in use
-- Backend (5000): Check if another .NET app is running
-- Frontend (3000): Check if another Next.js app is running
+- Server (5000): Check if another .NET app is running
+- Client (3000): Check if another Next.js app is running
 - PostgreSQL (5432): Check if local PostgreSQL is running
 
 ### Permission errors (Linux/Mac)
@@ -133,13 +133,13 @@ After starting the services, you can access:
 ### PowerShell execution policy (Windows)
 - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-### Backend won't start
-- Ensure you're in the `backend` directory
+### Server won't start
+- Ensure you're in the `server` directory
 - Check that `GatekeeperHQ.API` project exists
 - Verify .NET SDK is installed: `dotnet --version`
 
-### Frontend won't start
-- Ensure you're in the `frontend` directory
+### Client won't start
+- Ensure you're in the `client` directory
 - Check that `package.json` exists
 - Verify Node.js is installed: `node --version`
 - Try deleting `node_modules` and running `npm install` again
@@ -153,15 +153,15 @@ If you prefer to start services manually:
 docker-compose up -d
 ```
 
-### 2. Start Backend
+### 2. Start Server
 ```bash
-cd backend
+cd server
 dotnet run --project GatekeeperHQ.API
 ```
 
-### 3. Start Frontend (in a new terminal)
+### 3. Start Client (in a new terminal)
 ```bash
-cd frontend
+cd client
 npm install
 npm run dev
 ```
@@ -171,16 +171,16 @@ npm run dev
 The scripts assume the following directory structure:
 ```
 GatekeeperHQ/
-├── backend/          # .NET backend solution
+├── server/          # .NET server solution
 │   └── GatekeeperHQ.API/
-├── frontend/         # Next.js frontend
+├── client/         # Next.js client
 ├── docker-compose.yml
 └── scripts/          # This folder
 ```
 
 ## Additional Notes
 
-- The scripts automatically install frontend dependencies (`npm install`) before starting
+- The scripts automatically install client dependencies (`npm install`) before starting
 - PostgreSQL runs in detached mode (`-d` flag) so it doesn't block the terminal
-- Backend and frontend run in the foreground so you can see their logs
-- The scripts wait 3 seconds between starting backend and frontend to allow the API to initialize
+- Server and client run in the foreground so you can see their logs
+- The scripts wait 3 seconds between starting server and client to allow the API to initialize

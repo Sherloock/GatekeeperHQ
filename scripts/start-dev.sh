@@ -4,8 +4,8 @@
 #
 # This script starts all development services:
 # 1. PostgreSQL database (via Docker Compose)
-# 2. .NET Backend API
-# 3. Next.js Frontend
+# 2. .NET Server API
+# 3. Next.js Client
 #
 # Usage:
 #   ./scripts/start-dev.sh
@@ -30,37 +30,37 @@ echo "Starting PostgreSQL..."
 cd "$PROJECT_ROOT"
 docker-compose up -d
 
-# Start Backend
-echo "Starting Backend..."
-cd "$PROJECT_ROOT/backend"
+# Start Server
+echo "Starting Server..."
+cd "$PROJECT_ROOT/server"
 dotnet run --project GatekeeperHQ.API &
-BACKEND_PID=$!
+SERVER_PID=$!
 cd "$PROJECT_ROOT"
 
-# Wait a bit for backend to start
+# Wait a bit for server to start
 sleep 3
 
-# Start Frontend
-echo "Starting Frontend..."
-cd "$PROJECT_ROOT/frontend"
+# Start Client
+echo "Starting Client..."
+cd "$PROJECT_ROOT/client"
 npm install && npm run dev &
-FRONTEND_PID=$!
+CLIENT_PID=$!
 cd "$PROJECT_ROOT"
 
 echo ""
 echo "========================================="
 echo "All services started!"
 echo "========================================="
-echo "Backend PID: $BACKEND_PID"
-echo "Frontend PID: $FRONTEND_PID"
+echo "Server PID: $SERVER_PID"
+echo "Client PID: $CLIENT_PID"
 echo ""
-echo "Backend API: http://localhost:5000"
+echo "Server API: http://localhost:5000"
 echo "Swagger UI: http://localhost:5000/swagger"
-echo "Frontend: http://localhost:3000"
+echo "Client: http://localhost:3000"
 echo ""
 echo "Press Ctrl+C to stop all services"
 echo "========================================="
 
 # Wait for user interrupt
-trap "echo 'Stopping services...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; docker-compose down; exit" INT
+trap "echo 'Stopping services...'; kill $SERVER_PID $CLIENT_PID 2>/dev/null; docker-compose down; exit" INT
 wait

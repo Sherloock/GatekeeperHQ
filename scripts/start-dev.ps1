@@ -2,8 +2,8 @@
 #
 # This script starts all development services:
 # 1. PostgreSQL database (via Docker Compose)
-# 2. .NET Backend API (in a new PowerShell window)
-# 3. Next.js Frontend (in a new PowerShell window)
+# 2. .NET Server API (in a new PowerShell window)
+# 3. Next.js Client (in a new PowerShell window)
 #
 # Usage:
 #   .\scripts\start-dev.ps1
@@ -16,7 +16,7 @@
 #   - Node.js 18+ installed
 #   - PostgreSQL container will be started in detached mode
 #
-# Note: This script opens separate PowerShell windows for backend and frontend.
+# Note: This script opens separate PowerShell windows for server and client.
 #       Close those windows individually to stop the services.
 
 # Get the project root directory (parent of scripts folder)
@@ -37,26 +37,26 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Start Backend
-Write-Host "Starting Backend..." -ForegroundColor Green
-$backendCommand = "cd '$ProjectRoot\backend'; dotnet run --project GatekeeperHQ.API"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $backendCommand
+# Start Server
+Write-Host "Starting Server..." -ForegroundColor Green
+$serverCommand = "cd '$ProjectRoot\server'; dotnet run --project GatekeeperHQ.API"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $serverCommand
 
 Start-Sleep -Seconds 3
 
-# Start Frontend
-Write-Host "Starting Frontend..." -ForegroundColor Green
-$frontendCommand = "cd '$ProjectRoot\frontend'; npm install; npm run dev"
-Start-Process powershell -ArgumentList "-NoExit", "-Command", $frontendCommand
+# Start Client
+Write-Host "Starting Client..." -ForegroundColor Green
+$clientCommand = "cd '$ProjectRoot\client'; npm install; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", $clientCommand
 
 Write-Host ""
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "All services started!" -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "Backend API: http://localhost:5000" -ForegroundColor Yellow
+Write-Host "Server API: http://localhost:5000" -ForegroundColor Yellow
 Write-Host "Swagger UI: http://localhost:5000/swagger" -ForegroundColor Yellow
-Write-Host "Frontend: http://localhost:3000" -ForegroundColor Yellow
+Write-Host "Client: http://localhost:3000" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Check the opened PowerShell windows for backend and frontend logs." -ForegroundColor Yellow
+Write-Host "Check the opened PowerShell windows for server and client logs." -ForegroundColor Yellow
 Write-Host "Close those windows to stop the respective services." -ForegroundColor Yellow
 Write-Host "=========================================" -ForegroundColor Cyan
