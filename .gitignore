@@ -1,8 +1,8 @@
 # .NET
-backend/**/bin/
-backend/**/obj/
-backend/**/.vs/
-backend/**/.vscode/
+server/**/bin/
+server/**/obj/
+server/**/.vs/
+server/**/.vscode/
 *.user
 *.suo
 *.cache
@@ -10,14 +10,31 @@ backend/**/.vscode/
 *.exe
 *.pdb
 *.log
+*.csproj.nuget.*
+*.nuget.g.props
+*.nuget.g.targets
+project.assets.json
+project.nuget.cache
+*.assets.cache
+*.FileListAbsolute.txt
+*.GlobalUsings.g.cs
+**/ref/
+**/refint/
+**/Debug/
+**/Release/
+**/x64/
+**/x86/
+**/AnyCPU/
+*.userosscache
+*.sln.docstates
 
 # Node
-frontend/node_modules/
-frontend/.next/
-frontend/out/
-frontend/build/
-frontend/.env*.local
-frontend/.vercel
+client/node_modules/
+client/.next/
+client/out/
+client/build/
+client/.env*.local
+client/.vercel
 
 # Database
 *.db
