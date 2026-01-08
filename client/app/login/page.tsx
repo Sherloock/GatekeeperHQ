@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/useAuth';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 const loginSchema = z.object({
@@ -16,9 +16,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login, user, loading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
 
   const {
     register,
@@ -28,22 +28,35 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  // Redirect if already logged in
-  if (user) {
-    router.push('/dashboard');
-    return null;
+  // Redirect if already logged in (use useEffect to avoid render-time redirect)
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  // Don't render form if still loading or user is logged in
+  if (loading || user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   const onSubmit = async (data: LoginFormData) => {
     setError(null);
-    setLoading(true);
+    setFormLoading(true);
     try {
       await login(data.email, data.password);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -94,10 +107,10 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={formLoading}
             className="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {formLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 

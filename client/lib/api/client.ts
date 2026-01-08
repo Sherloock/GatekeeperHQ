@@ -34,7 +34,12 @@ class ApiClient {
         if (error.response?.status === 401) {
           this.clearToken();
           if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+            // Only redirect if we're not already on the login page
+            // This prevents infinite redirect loops
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/login' && currentPath !== '/') {
+              window.location.href = '/login';
+            }
           }
         }
         return Promise.reject(error);

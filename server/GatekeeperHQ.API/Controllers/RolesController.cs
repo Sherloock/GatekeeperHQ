@@ -20,26 +20,42 @@ public class RolesController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = Permissions.RolesView)]
-    public async Task<ActionResult<List<RoleDto>>> GetRoles()
+    public async Task<ActionResult<List<DTOs.Roles.RoleDto>>> GetRoles()
     {
         var roles = await _roleService.GetAllRolesAsync();
-        return Ok(roles);
+        var apiRoles = roles.Select(r => new DTOs.Roles.RoleDto
+        {
+            Id = r.Id,
+            Name = r.Name,
+            Description = r.Description,
+            CreatedAt = r.CreatedAt,
+            Permissions = r.Permissions
+        }).ToList();
+        return Ok(apiRoles);
     }
 
     [HttpGet("{id}")]
     [Authorize(Policy = Permissions.RolesView)]
-    public async Task<ActionResult<RoleDto>> GetRole(int id)
+    public async Task<ActionResult<DTOs.Roles.RoleDto>> GetRole(int id)
     {
         var role = await _roleService.GetRoleByIdAsync(id);
         if (role == null)
             return NotFound(new { message = "Role not found" });
 
-        return Ok(role);
+        var apiRole = new DTOs.Roles.RoleDto
+        {
+            Id = role.Id,
+            Name = role.Name,
+            Description = role.Description,
+            CreatedAt = role.CreatedAt,
+            Permissions = role.Permissions
+        };
+        return Ok(apiRole);
     }
 
     [HttpPost]
     [Authorize(Policy = Permissions.RolesManage)]
-    public async Task<ActionResult<RoleDto>> CreateRole([FromBody] CreateRoleRequest request)
+    public async Task<ActionResult<DTOs.Roles.RoleDto>> CreateRole([FromBody] DTOs.Roles.CreateRoleRequest request)
     {
         try
         {
@@ -50,7 +66,15 @@ public class RolesController : ControllerBase
                 PermissionIds = request.PermissionIds
             });
 
-            return CreatedAtAction(nameof(GetRole), new { id = role.Id }, role);
+            var apiRole = new DTOs.Roles.RoleDto
+            {
+                Id = role.Id,
+                Name = role.Name,
+                Description = role.Description,
+                CreatedAt = role.CreatedAt,
+                Permissions = role.Permissions
+            };
+            return CreatedAtAction(nameof(GetRole), new { id = role.Id }, apiRole);
         }
         catch (InvalidOperationException ex)
         {
@@ -60,7 +84,7 @@ public class RolesController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Policy = Permissions.RolesManage)]
-    public async Task<ActionResult<RoleDto>> UpdateRole(int id, [FromBody] UpdateRoleRequest request)
+    public async Task<ActionResult<DTOs.Roles.RoleDto>> UpdateRole(int id, [FromBody] DTOs.Roles.UpdateRoleRequest request)
     {
         try
         {
@@ -74,7 +98,15 @@ public class RolesController : ControllerBase
             if (role == null)
                 return NotFound(new { message = "Role not found" });
 
-            return Ok(role);
+            var apiRole = new DTOs.Roles.RoleDto
+            {
+                Id = role.Id,
+                Name = role.Name,
+                Description = role.Description,
+                CreatedAt = role.CreatedAt,
+                Permissions = role.Permissions
+            };
+            return Ok(apiRole);
         }
         catch (InvalidOperationException ex)
         {
@@ -95,10 +127,16 @@ public class RolesController : ControllerBase
 
     [HttpGet("{id}/permissions")]
     [Authorize(Policy = Permissions.RolesView)]
-    public async Task<ActionResult<List<PermissionDto>>> GetRolePermissions(int id)
+    public async Task<ActionResult<List<DTOs.Permissions.PermissionDto>>> GetRolePermissions(int id)
     {
         var permissions = await _roleService.GetRolePermissionsAsync(id);
-        return Ok(permissions);
+        var apiPermissions = permissions.Select(p => new DTOs.Permissions.PermissionDto
+        {
+            Id = p.Id,
+            Key = p.Key,
+            Description = p.Description
+        }).ToList();
+        return Ok(apiPermissions);
     }
 
     [HttpPost("{id}/permissions")]

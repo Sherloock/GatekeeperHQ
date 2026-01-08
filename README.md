@@ -60,27 +60,21 @@ A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js clien
 
 ### Option 1: Using Development Scripts (Recommended)
 
-The easiest way to start all services is using the provided scripts:
+The easiest way to start all services is using the provided PowerShell script:
 
-**Windows (PowerShell):**
 ```powershell
 .\scripts\start-dev.ps1
 ```
 
-**Windows (Command Prompt):**
-```cmd
-scripts\start-dev.bat
+**Note:** PowerShell is cross-platform and works on Windows, Linux, and macOS. If you get an execution policy error on Windows, run:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
-**Linux/Mac/Git Bash:**
-```bash
-./scripts/start-dev.sh
-```
-
-These scripts will automatically:
+The script will automatically:
 1. Start PostgreSQL (Docker)
-2. Start the Server API
-3. Install client dependencies and start the Client
+2. Start the Server API (in a new window)
+3. Install client dependencies and start the Client (in a new window)
 
 See [scripts/README.md](scripts/README.md) for detailed documentation.
 

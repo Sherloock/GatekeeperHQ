@@ -20,26 +20,44 @@ public class UsersController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = Permissions.UsersView)]
-    public async Task<ActionResult<List<UserDto>>> GetUsers()
+    public async Task<ActionResult<List<DTOs.Users.UserDto>>> GetUsers()
     {
         var users = await _userService.GetAllUsersAsync();
-        return Ok(users);
+        var apiUsers = users.Select(u => new DTOs.Users.UserDto
+        {
+            Id = u.Id,
+            Email = u.Email,
+            IsActive = u.IsActive,
+            CreatedAt = u.CreatedAt,
+            UpdatedAt = u.UpdatedAt,
+            Roles = u.Roles
+        }).ToList();
+        return Ok(apiUsers);
     }
 
     [HttpGet("{id}")]
     [Authorize(Policy = Permissions.UsersView)]
-    public async Task<ActionResult<UserDto>> GetUser(int id)
+    public async Task<ActionResult<DTOs.Users.UserDto>> GetUser(int id)
     {
         var user = await _userService.GetUserByIdAsync(id);
         if (user == null)
             return NotFound(new { message = "User not found" });
 
-        return Ok(user);
+        var apiUser = new DTOs.Users.UserDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            IsActive = user.IsActive,
+            CreatedAt = user.CreatedAt,
+            UpdatedAt = user.UpdatedAt,
+            Roles = user.Roles
+        };
+        return Ok(apiUser);
     }
 
     [HttpPost]
     [Authorize(Policy = Permissions.UsersCreate)]
-    public async Task<ActionResult<UserDto>> CreateUser([FromBody] CreateUserRequest request)
+    public async Task<ActionResult<DTOs.Users.UserDto>> CreateUser([FromBody] DTOs.Users.CreateUserRequest request)
     {
         try
         {
@@ -51,7 +69,16 @@ public class UsersController : ControllerBase
                 RoleIds = request.RoleIds
             });
 
-            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+            var apiUser = new DTOs.Users.UserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt,
+                Roles = user.Roles
+            };
+            return CreatedAtAction(nameof(GetUser), new { id = user.Id }, apiUser);
         }
         catch (InvalidOperationException ex)
         {
@@ -61,7 +88,7 @@ public class UsersController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Policy = Permissions.UsersEdit)]
-    public async Task<ActionResult<UserDto>> UpdateUser(int id, [FromBody] UpdateUserRequest request)
+    public async Task<ActionResult<DTOs.Users.UserDto>> UpdateUser(int id, [FromBody] DTOs.Users.UpdateUserRequest request)
     {
         try
         {
@@ -76,7 +103,16 @@ public class UsersController : ControllerBase
             if (user == null)
                 return NotFound(new { message = "User not found" });
 
-            return Ok(user);
+            var apiUser = new DTOs.Users.UserDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt,
+                UpdatedAt = user.UpdatedAt,
+                Roles = user.Roles
+            };
+            return Ok(apiUser);
         }
         catch (InvalidOperationException ex)
         {

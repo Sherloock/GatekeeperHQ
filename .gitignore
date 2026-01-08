@@ -62,3 +62,6 @@ logs/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Script lock files
+.start-dev.lock

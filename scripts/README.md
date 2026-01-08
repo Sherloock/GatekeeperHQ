@@ -4,35 +4,7 @@ This folder contains scripts to help you start and manage the GatekeeperHQ devel
 
 ## Available Scripts
 
-### `start-dev.sh` (Bash/Linux/Mac/Git Bash)
-
-Starts all development services in a single terminal session:
-- PostgreSQL database (via Docker Compose)
-- .NET Server API
-- Next.js Client
-
-**Usage:**
-```bash
-./scripts/start-dev.sh
-# or
-bash scripts/start-dev.sh
-```
-
-**Features:**
-- Runs all services in the background
-- Displays PIDs for each service
-- Gracefully stops all services on Ctrl+C
-- Automatically stops PostgreSQL when script exits
-
-**Prerequisites:**
-- Docker and Docker Compose
-- .NET SDK 8.0+
-- Node.js 18+
-- Bash shell (Git Bash on Windows)
-
----
-
-### `start-dev.ps1` (PowerShell)
+### `start-dev.ps1` (PowerShell - Cross-Platform)
 
 Starts all development services in separate PowerShell windows:
 - PostgreSQL database (via Docker Compose)
@@ -51,45 +23,72 @@ powershell -ExecutionPolicy Bypass -File .\scripts\start-dev.ps1
 - Easy to view logs for each service
 - Color-coded output
 - Windows stay open after script completes
+- Prevents multiple instances from running simultaneously
+- Cross-platform (works on Windows, Linux, and macOS with PowerShell Core)
 
 **Prerequisites:**
 - Docker and Docker Compose
 - .NET SDK 8.0+
 - Node.js 18+
-- PowerShell 5.1+ (Windows PowerShell or PowerShell Core)
+- PowerShell 5.1+ (Windows PowerShell) or PowerShell Core 7+ (cross-platform)
 
-**Note:** If you get an execution policy error, run:
+**Note:** If you get an execution policy error on Windows, run:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
+**Troubleshooting:**
+- If you see "already running" error, check if a previous instance is still active
+- To force remove the lock file: `Remove-Item .start-dev.lock -Force`
+- To stop services, close the individual PowerShell windows for server and client
+- To stop PostgreSQL: `docker-compose down`
+
 ---
 
-### `start-dev.bat` (Windows Command Prompt)
+### `test-local.ps1` (PowerShell) - Testing Script
 
-Starts all development services in separate command windows:
-- PostgreSQL database (via Docker Compose)
-- .NET Server API (new window)
-- Next.js Client (new window)
+Tests if all services are running correctly:
+- PostgreSQL database (via Docker)
+- .NET Server API
+- Next.js Client
+- Key API endpoints (login, protected routes)
 
 **Usage:**
-```cmd
-scripts\start-dev.bat
+```powershell
+.\scripts\test-local.ps1
 # or
-cd scripts && start-dev.bat
+powershell -ExecutionPolicy Bypass -File .\scripts\test-local.ps1
 ```
 
 **Features:**
-- Opens separate windows for server and client
-- Easy to view logs for each service
-- Works in standard Windows CMD
-- Windows stay open after script completes
+- Automated testing of all services
+- Checks Docker, PostgreSQL, Backend, Frontend
+- Tests login and protected endpoints
+- Color-coded output with clear pass/fail indicators
 
 **Prerequisites:**
-- Docker and Docker Compose
-- .NET SDK 8.0+
-- Node.js 18+
-- Windows Command Prompt
+- All services must be running (use `start-dev.ps1` first)
+- PowerShell 5.1+ (Windows PowerShell or PowerShell Core)
+
+**See also:** `TESTING.md` for detailed manual testing guide
+
+---
+
+### `test-local.sh` (Bash) - Testing Script
+
+Same as PowerShell version but for Bash environments (Linux/Mac/Git Bash).
+
+**Usage:**
+```bash
+./scripts/test-local.sh
+# or
+bash scripts/test-local.sh
+```
+
+**Prerequisites:**
+- All services must be running (use `start-dev.ps1` first, or start manually)
+- Bash shell (Git Bash on Windows)
+- `curl` and `jq` installed (for API testing)
 
 ---
 
@@ -108,12 +107,8 @@ After starting the services, you can access:
 
 ## Stopping Services
 
-### For `start-dev.sh`:
-- Press `Ctrl+C` in the terminal where the script is running
-- This will stop all services and shut down PostgreSQL
-
-### For `start-dev.ps1` and `start-dev.bat`:
-- Close the individual PowerShell/CMD windows for server and client
+### For `start-dev.ps1`:
+- Close the individual PowerShell windows for server and client
 - To stop PostgreSQL, run: `docker-compose down`
 
 ## Troubleshooting
@@ -127,11 +122,13 @@ After starting the services, you can access:
 - Client (3000): Check if another Next.js app is running
 - PostgreSQL (5432): Check if local PostgreSQL is running
 
-### Permission errors (Linux/Mac)
-- Make scripts executable: `chmod +x scripts/*.sh`
-
 ### PowerShell execution policy (Windows)
 - Run: `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
+### Script already running
+- If you see "already running" error, check if a previous instance is still active
+- To force remove the lock file: `Remove-Item .start-dev.lock -Force`
+- Check running processes: `Get-Process | Where-Object {$_.ProcessName -like "*dotnet*" -or $_.ProcessName -like "*node*"}`
 
 ### Server won't start
 - Ensure you're in the `server` directory
@@ -149,18 +146,18 @@ After starting the services, you can access:
 If you prefer to start services manually:
 
 ### 1. Start PostgreSQL
-```bash
+```powershell
 docker-compose up -d
 ```
 
 ### 2. Start Server
-```bash
+```powershell
 cd server
 dotnet run --project GatekeeperHQ.API
 ```
 
 ### 3. Start Client (in a new terminal)
-```bash
+```powershell
 cd client
 npm install
 npm run dev
@@ -182,5 +179,6 @@ GatekeeperHQ/
 
 - The scripts automatically install client dependencies (`npm install`) before starting
 - PostgreSQL runs in detached mode (`-d` flag) so it doesn't block the terminal
-- Server and client run in the foreground so you can see their logs
+- Server and client run in separate windows so you can see their logs
 - The scripts wait 3 seconds between starting server and client to allow the API to initialize
+- A lock file (`.start-dev.lock`) prevents multiple instances from running simultaneously

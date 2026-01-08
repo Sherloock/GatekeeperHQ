@@ -15,12 +15,11 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.0.3" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GatekeeperHQ.Domain\GatekeeperHQ.Domain.csproj" />
-    <ProjectReference Include="..\GatekeeperHQ.Application\GatekeeperHQ.Application.csproj" />
   </ItemGroup>
 
 </Project>
