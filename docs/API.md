@@ -8,19 +8,13 @@ http://localhost:5000/api/v1
 
 ## Authentication
 
-GatekeeperHQ supports two authentication methods:
-
-### 1. JWT Token Authentication
-
-Include the JWT token in the Authorization header:
+### JWT Token
 
 ```
 Authorization: Bearer <token>
 ```
 
-### 2. API Key Authentication
-
-Include the API key in the X-API-Key header:
+### API Key
 
 ```
 X-API-Key: gk_your_api_key_here
@@ -28,265 +22,371 @@ X-API-Key: gk_your_api_key_here
 
 ## Multi-Tenancy
 
-Tenants can be resolved via:
+Tenant resolution order:
 
 1. **Subdomain**: `tenant1.gatekeeperhq.com`
 2. **API Key Header**: `X-API-Key: <tenant_api_key>`
-3. **JWT Claim**: `tenant_id` claim in JWT token
+3. **JWT Claim**: `tenant_id` claim in token
 4. **Query Parameter**: `?tenantId=1` (development only)
+
+---
 
 ## Endpoints
 
-### Authentication
+### Auth
 
 #### POST /auth/login
-Login and receive JWT token and refresh token.
+
+Public. Returns JWT token and refresh token.
 
 **Request:**
+
 ```json
 {
-  "email": "user@example.com",
-  "password": "password123"
+	"email": "user@example.com",
+	"password": "password123"
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "base64_refresh_token",
-  "userId": 1,
-  "email": "user@example.com",
-  "permissions": ["users.view", "users.create"]
+	"token": "eyJhbGciOiJIUzI1NiIs...",
+	"refreshToken": "base64_refresh_token",
+	"userId": 1,
+	"email": "user@example.com",
+	"permissions": ["users.view", "users.create"],
+	"isSuperAdmin": false
 }
 ```
 
 #### POST /auth/refresh
-Refresh access token using refresh token.
+
+Public. Refresh access token.
 
 **Request:**
+
 ```json
 {
-  "refreshToken": "base64_refresh_token"
+	"refreshToken": "base64_refresh_token"
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "new_base64_refresh_token"
+	"token": "eyJhbGciOiJIUzI1NiIs...",
+	"refreshToken": "new_base64_refresh_token"
 }
 ```
+
+#### POST /auth/revoke
+
+Authenticated. Revoke a refresh token.
+
+**Request:**
+
+```json
+{
+	"refreshToken": "base64_refresh_token"
+}
+```
+
+**Response:** `204 No Content`
 
 #### GET /auth/me
-Get current authenticated user information.
+
+Authenticated. Get current user info.
 
 **Response:**
+
 ```json
 {
-  "id": 1,
-  "email": "user@example.com",
-  "isActive": true,
-  "roles": ["Admin"],
-  "permissions": ["users.view", "users.create"]
+	"id": 1,
+	"email": "user@example.com",
+	"isActive": true,
+	"isSuperAdmin": false,
+	"roles": ["Admin"],
+	"permissions": ["users.view", "users.create"]
 }
 ```
+
+---
 
 ### Users
 
-All user endpoints require authentication and appropriate permissions.
+| Method | Endpoint    | Permission     | Description    |
+| ------ | ----------- | -------------- | -------------- |
+| GET    | /users      | `users.view`   | List all users |
+| GET    | /users/{id} | `users.view`   | Get user by ID |
+| POST   | /users      | `users.create` | Create user    |
+| PUT    | /users/{id} | `users.edit`   | Update user    |
+| DELETE | /users/{id} | `users.delete` | Delete user    |
 
-#### GET /users
-List all users (requires `users.view` permission).
+**POST /users Request:**
 
-#### GET /users/{id}
-Get user by ID (requires `users.view` permission).
-
-#### POST /users
-Create new user (requires `users.create` permission).
-
-**Request:**
 ```json
 {
-  "email": "newuser@example.com",
-  "password": "password123",
-  "isActive": true,
-  "roleIds": [1, 2]
+	"email": "newuser@example.com",
+	"password": "password123",
+	"isActive": true,
+	"roleIds": [1, 2]
 }
 ```
 
-#### PUT /users/{id}
-Update user (requires `users.edit` permission).
-
-#### DELETE /users/{id}
-Delete user (requires `users.delete` permission).
+---
 
 ### Roles
 
-#### GET /roles
-List all roles (requires `roles.view` permission).
+| Method | Endpoint                         | Permission     | Description            |
+| ------ | -------------------------------- | -------------- | ---------------------- |
+| GET    | /roles                           | `roles.view`   | List all roles         |
+| GET    | /roles/{id}                      | `roles.view`   | Get role by ID         |
+| POST   | /roles                           | `roles.manage` | Create role            |
+| PUT    | /roles/{id}                      | `roles.manage` | Update role            |
+| DELETE | /roles/{id}                      | `roles.manage` | Delete role            |
+| POST   | /roles/{id}/permissions          | `roles.manage` | Add permission to role |
+| DELETE | /roles/{id}/permissions/{permId} | `roles.manage` | Remove permission      |
 
-#### GET /roles/{id}
-Get role by ID (requires `roles.view` permission).
+**POST /roles Request:**
 
-#### POST /roles
-Create new role (requires `roles.manage` permission).
-
-**Request:**
 ```json
 {
-  "name": "Editor",
-  "description": "Can edit content",
-  "permissionIds": [1, 2, 3]
+	"name": "Editor",
+	"description": "Can edit content",
+	"permissionIds": [1, 2, 3]
 }
 ```
 
-#### PUT /roles/{id}
-Update role (requires `roles.manage` permission).
+---
 
-#### DELETE /roles/{id}
-Delete role (requires `roles.manage` permission).
+### Permissions
 
-#### POST /roles/{id}/permissions
-Add permission to role (requires `roles.manage` permission).
+| Method | Endpoint     | Permission           | Description          |
+| ------ | ------------ | -------------------- | -------------------- |
+| GET    | /permissions | `permissions.view`   | List all permissions |
+| POST   | /permissions | `permissions.create` | Create permission    |
 
-**Request:**
+---
+
+### Tenants (Super Admin)
+
+| Method | Endpoint                         | Permission       | Description        |
+| ------ | -------------------------------- | ---------------- | ------------------ |
+| GET    | /tenants                         | `tenants.view`   | List all tenants   |
+| GET    | /tenants/{id}                    | `tenants.view`   | Get tenant by ID   |
+| POST   | /tenants                         | `tenants.create` | Create tenant      |
+| PUT    | /tenants/{id}                    | `tenants.manage` | Update tenant      |
+| DELETE | /tenants/{id}                    | `tenants.manage` | Delete tenant      |
+| POST   | /tenants/{id}/regenerate-api-key | `tenants.manage` | Regenerate API key |
+
+**POST /tenants Request:**
+
 ```json
 {
-  "permissionId": 1
-}
-```
-
-#### DELETE /roles/{id}/permissions/{permissionId}
-Remove permission from role (requires `roles.manage` permission).
-
-### Webhooks
-
-#### GET /webhooks
-List all webhooks.
-
-#### POST /webhooks
-Create webhook.
-
-**Request:**
-```json
-{
-  "url": "https://example.com/webhook",
-  "secret": "optional_secret",
-  "events": ["user.created", "user.updated"],
-  "isActive": true
-}
-```
-
-#### PUT /webhooks/{id}
-Update webhook.
-
-#### DELETE /webhooks/{id}
-Delete webhook.
-
-### API Keys
-
-#### GET /api-keys
-List all API keys.
-
-#### POST /api-keys
-Create API key.
-
-**Request:**
-```json
-{
-  "name": "Production API Key",
-  "permissions": ["users.view", "users.create"],
-  "isActive": true,
-  "expiresAt": "2025-12-31T23:59:59Z"
+	"name": "Acme Corp",
+	"isActive": true
 }
 ```
 
 **Response:**
+
 ```json
 {
-  "id": 1,
-  "name": "Production API Key",
-  "key": "gk_abc123...", // Only returned on creation
-  "permissions": ["users.view", "users.create"],
-  "isActive": true,
-  "expiresAt": "2025-12-31T23:59:59Z",
-  "createdAt": "2024-01-01T00:00:00Z"
+	"id": 1,
+	"name": "Acme Corp",
+	"apiKey": "gk_abc123...",
+	"isActive": true,
+	"createdAt": "2026-01-01T00:00:00Z",
+	"updatedAt": "2026-01-01T00:00:00Z"
 }
 ```
+
+---
+
+### Invitations
+
+| Method | Endpoint                        | Permission           | Description         |
+| ------ | ------------------------------- | -------------------- | ------------------- |
+| GET    | /invitations/tenants/{tenantId} | `invitations.manage` | List tenant invites |
+| POST   | /invitations/tenants/{tenantId} | `invitations.manage` | Create invitation   |
+| DELETE | /invitations/{id}               | `invitations.manage` | Revoke invitation   |
+| GET    | /invitations/{token}/validate   | Public               | Validate token      |
+| POST   | /invitations/{token}/accept     | Public               | Accept invitation   |
+
+**POST /invitations/tenants/{tenantId} Request:**
+
+```json
+{
+	"email": "newuser@example.com",
+	"roleId": 1
+}
+```
+
+**GET /invitations/{token}/validate Response:**
+
+```json
+{
+	"valid": true,
+	"email": "newuser@example.com",
+	"tenantName": "Acme Corp",
+	"roleName": "User",
+	"expiresAt": "2026-02-01T00:00:00Z"
+}
+```
+
+**POST /invitations/{token}/accept Request:**
+
+```json
+{
+	"password": "newpassword123"
+}
+```
+
+---
+
+### API Keys
+
+| Method | Endpoint  | Description    |
+| ------ | --------- | -------------- |
+| GET    | /api-keys | List API keys  |
+| POST   | /api-keys | Create API key |
+
+**POST /api-keys Request:**
+
+```json
+{
+	"name": "Production API Key",
+	"permissions": ["users.view", "users.create"],
+	"isActive": true,
+	"expiresAt": "2026-12-31T23:59:59Z"
+}
+```
+
+**Response:**
+
+```json
+{
+	"id": 1,
+	"name": "Production API Key",
+	"key": "gk_abc123...",
+	"permissions": ["users.view", "users.create"],
+	"isActive": true,
+	"expiresAt": "2026-12-31T23:59:59Z",
+	"createdAt": "2026-01-01T00:00:00Z"
+}
+```
+
+> Note: The `key` field is only returned on creation.
+
+---
+
+### Webhooks
+
+| Method | Endpoint       | Description    |
+| ------ | -------------- | -------------- |
+| GET    | /webhooks      | List webhooks  |
+| POST   | /webhooks      | Create webhook |
+| PUT    | /webhooks/{id} | Update webhook |
+| DELETE | /webhooks/{id} | Delete webhook |
+
+**POST /webhooks Request:**
+
+```json
+{
+	"url": "https://example.com/webhook",
+	"secret": "optional_secret",
+	"events": ["user.created", "user.updated"],
+	"isActive": true
+}
+```
+
+#### Webhook Events
+
+- `user.created`, `user.updated`, `user.deleted`
+- `role.created`, `role.updated`, `role.deleted`
+- `permission.granted`, `permission.revoked`
+
+#### Webhook Headers
+
+```
+X-Webhook-Event: user.created
+X-Webhook-Signature: <HMAC-SHA256 signature>
+X-Webhook-Timestamp: <unix timestamp>
+```
+
+Signature: `HMAC-SHA256(secret, timestamp + "." + payload)`
+
+---
 
 ### Health Checks
 
-#### GET /health
-Basic health check.
+| Endpoint      | Description           |
+| ------------- | --------------------- |
+| /health       | Basic health check    |
+| /health/ready | Readiness (checks DB) |
+| /health/live  | Liveness              |
 
-#### GET /health/ready
-Readiness probe (checks database and Redis).
+---
 
-#### GET /health/live
-Liveness probe (checks if application is running).
+## Permissions Reference
+
+### Tenant-Level
+
+| Permission           | Description              |
+| -------------------- | ------------------------ |
+| `users.view`         | View users               |
+| `users.create`       | Create users             |
+| `users.edit`         | Edit users               |
+| `users.delete`       | Delete users             |
+| `roles.view`         | View roles               |
+| `roles.manage`       | Create/edit/delete roles |
+| `permissions.view`   | View permissions         |
+| `permissions.create` | Create permissions       |
+| `permissions.manage` | Edit/delete permissions  |
+| `dashboard.access`   | Access dashboard         |
+| `settings.access`    | Access settings          |
+
+### Super Admin
+
+| Permission           | Description         |
+| -------------------- | ------------------- |
+| `tenants.view`       | View tenants        |
+| `tenants.create`     | Create tenants      |
+| `tenants.manage`     | Edit/delete tenants |
+| `invitations.manage` | Manage invitations  |
+
+---
 
 ## Error Responses
 
-All errors follow this format:
-
 ```json
 {
-  "message": "Error description"
+	"message": "Error description"
 }
 ```
 
-### Status Codes
+| Status | Description    |
+| ------ | -------------- |
+| 200    | Success        |
+| 201    | Created        |
+| 204    | No Content     |
+| 400    | Bad Request    |
+| 401    | Unauthorized   |
+| 403    | Forbidden      |
+| 404    | Not Found      |
+| 409    | Conflict       |
+| 500    | Internal Error |
 
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request
-- `401` - Unauthorized
-- `403` - Forbidden
-- `404` - Not Found
-- `409` - Conflict
-- `429` - Too Many Requests
-- `500` - Internal Server Error
-
-## Rate Limiting
-
-Rate limiting is enabled by default:
-- Login endpoint: 5 requests per 15 minutes
-- All other endpoints: 100 requests per minute
-
-Rate limit headers:
-- `X-RateLimit-Limit`: Maximum requests allowed
-- `X-RateLimit-Remaining`: Remaining requests
-- `X-RateLimit-Reset`: Time when limit resets
-
-## Webhook Events
-
-Webhooks are triggered for the following events:
-
-- `user.created` - User created
-- `user.updated` - User updated
-- `user.deleted` - User deleted
-- `role.created` - Role created
-- `role.updated` - Role updated
-- `role.deleted` - Role deleted
-- `permission.granted` - Permission granted to role
-- `permission.revoked` - Permission revoked from role
-
-### Webhook Payload
-
-Webhooks are sent as POST requests with the following headers:
-
-- `X-Webhook-Event`: Event name
-- `X-Webhook-Signature`: HMAC-SHA256 signature
-- `X-Webhook-Timestamp`: Unix timestamp
-
-The signature is computed as: `HMAC-SHA256(secret, timestamp + "." + payload)`
+---
 
 ## Versioning
 
-The API is versioned via URL path: `/api/v1/...`
+API version via URL path: `/api/v1/...`
 
-You can also specify version via:
-- Query parameter: `?version=1.0`
+Alternative methods:
+
+- Query: `?version=1.0`
 - Header: `X-API-Version: 1.0`

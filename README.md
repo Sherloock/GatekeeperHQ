@@ -183,4 +183,4 @@ dotnet ef database update --project GatekeeperHQ.Infrastructure --startup-projec
 
 ## License
 
-This project is for demonstration purposes.
+This project is licensed under the [MIT License](LICENSE).
