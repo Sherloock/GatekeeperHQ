@@ -11,19 +11,19 @@ namespace GatekeeperHQ.API.Filters;
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false)]
 public class RequireTenantContextAttribute : ActionFilterAttribute
 {
-    public override void OnActionExecuting(ActionExecutingContext context)
-    {
-        var tenantContext = context.HttpContext.RequestServices.GetService<ITenantContext>();
+	public override void OnActionExecuting(ActionExecutingContext context)
+	{
+		var tenantContext = context.HttpContext.RequestServices.GetService<ITenantContext>();
 
-        if (tenantContext == null || !tenantContext.TenantId.HasValue)
-        {
-            context.Result = new BadRequestObjectResult(new
-            {
-                message = "Tenant context is required. Please include X-Tenant-Id header or ensure your token includes a tenant claim."
-            });
-            return;
-        }
+		if (tenantContext == null || !tenantContext.TenantId.HasValue)
+		{
+			context.Result = new BadRequestObjectResult(new
+			{
+				message = "Tenant context is required. Please include X-Tenant-Id header or ensure your token includes a tenant claim."
+			});
+			return;
+		}
 
-        base.OnActionExecuting(context);
-    }
+		base.OnActionExecuting(context);
+	}
 }

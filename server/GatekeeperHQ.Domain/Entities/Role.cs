@@ -2,14 +2,14 @@ namespace GatekeeperHQ.Domain.Entities;
 
 public class Role
 {
-    public int Id { get; set; }
-    public int TenantId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+	public int Id { get; set; }
+	public int TenantId { get; set; }
+	public string Name { get; set; } = string.Empty;
+	public string? Description { get; set; }
+	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-    // Navigation properties
-    public Tenant Tenant { get; set; } = null!;
-    public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
-    public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+	// Navigation properties
+	public Tenant Tenant { get; set; } = null!;
+	public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
+	public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 }
