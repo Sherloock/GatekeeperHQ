@@ -7,7 +7,8 @@ using System.Security.Claims;
 namespace GatekeeperHQ.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
+[ApiVersion("1.0")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -36,10 +37,53 @@ public class AuthController : ControllerBase
         return Ok(new LoginResponse
         {
             Token = result.Token,
+            RefreshToken = result.RefreshToken,
             UserId = result.UserId,
             Email = result.Email,
             Permissions = result.Permissions
         });
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new { message = "Refresh token is required" });
+        }
+
+        var result = await _authService.RefreshTokenAsync(request.RefreshToken);
+
+        if (result == null)
+        {
+            return Unauthorized(new { message = "Invalid or expired refresh token" });
+        }
+
+        return Ok(new RefreshTokenResponse
+        {
+            Token = result.Token,
+            RefreshToken = result.RefreshToken
+        });
+    }
+
+    [HttpPost("revoke")]
+    [Authorize]
+    public async Task<IActionResult> RevokeToken([FromBody] RefreshTokenRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new { message = "Refresh token is required" });
+        }
+
+        var result = await _authService.RevokeRefreshTokenAsync(request.RefreshToken);
+
+        if (!result)
+        {
+            return BadRequest(new { message = "Invalid refresh token" });
+        }
+
+        return NoContent();
     }
 
     [HttpGet("me")]

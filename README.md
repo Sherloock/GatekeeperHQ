@@ -147,6 +147,28 @@ After seeding the database, you can login with:
 
 This user has the "Admin" role with all permissions.
 
+### Resetting Admin Password
+
+If you need to reset the admin password back to the default (`Admin123!`), you can use one of these methods:
+
+**Option 1: Using PowerShell Script (Recommended)**
+```powershell
+.\server\scripts\reset-admin-password.ps1
+```
+
+**Option 2: Using Console Application**
+```bash
+cd server/scripts/ResetAdminPassword
+dotnet run
+```
+
+**Option 3: Using C# Script (requires dotnet-script)**
+```bash
+dotnet script server/scripts/ResetAdminPassword.cs
+```
+
+All methods will reset the password for `admin@gatekeeperhq.com` to `Admin123!`.
+
 ## Project Structure
 
 ```

@@ -20,13 +20,14 @@ public class JwtService
         _expirationMinutes = expirationMinutes;
     }
 
-    public string GenerateToken(int userId, string email, IEnumerable<string> permissions)
+    public string GenerateToken(int userId, string email, int tenantId, IEnumerable<string> permissions)
     {
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim("tenant_id", tenantId.ToString())
         };
 
         // Add permissions as claims

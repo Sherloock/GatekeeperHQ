@@ -1,0 +1,61 @@
+{
+	"folders": [
+		{
+			"name": "root",
+			"path": "."
+		},
+		{
+			"name": "client",
+			"path": "client"
+		},
+		{
+			"name": "server",
+			"path": "server"
+		},
+		{
+			"name": "sdk-typescript",
+			"path": "sdks/typescript"
+		},
+		{
+			"name": "timer",
+			"path": "../timer"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/node_modules": true,
+			"**/bin": true,
+			"**/obj": true,
+			"**/.next": true
+		},
+		"search.exclude": {
+			"**/node_modules": true,
+			"**/bin": true,
+			"**/obj": true,
+			"**/.next": true,
+			"**/package-lock.json": true
+		},
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.eslint": "explicit",
+			"source.organizeImports": "explicit"
+		},
+		"typescript.preferences.importModuleSpecifier": "relative",
+		"dotnet.defaultSolution": "server/GatekeeperHQ.sln"
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-dotnettools.csharp",
+			"ms-dotnettools.csdevkit",
+			"dbaeumer.vscode-eslint",
+			"esbenp.prettier-vscode",
+			"bradlc.vscode-tailwindcss",
+			"prisma.prisma"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [],
+		"compounds": []
+	}
+}

@@ -16,15 +16,25 @@ public interface IUserService
 public class UserService : IUserService
 {
     private readonly AppDbContext _context;
+    private readonly ITenantContext _tenantContext;
+    private readonly IWebhookService? _webhookService;
 
-    public UserService(AppDbContext context)
+    public UserService(AppDbContext context, ITenantContext tenantContext, IWebhookService? webhookService = null)
     {
         _context = context;
+        _tenantContext = tenantContext;
+        _webhookService = webhookService;
     }
 
     public async Task<List<UserDto>> GetAllUsersAsync()
     {
+        if (!_tenantContext.TenantId.HasValue)
+        {
+            throw new InvalidOperationException("Tenant context is required");
+        }
+
         var users = await _context.Users
+            .Where(u => u.TenantId == _tenantContext.TenantId.Value)
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .ToListAsync();
@@ -42,7 +52,13 @@ public class UserService : IUserService
 
     public async Task<UserDto?> GetUserByIdAsync(int id)
     {
+        if (!_tenantContext.TenantId.HasValue)
+        {
+            throw new InvalidOperationException("Tenant context is required");
+        }
+
         var user = await _context.Users
+            .Where(u => u.TenantId == _tenantContext.TenantId.Value)
             .Include(u => u.UserRoles)
                 .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Id == id);
@@ -63,14 +79,20 @@ public class UserService : IUserService
 
     public async Task<UserDto> CreateUserAsync(CreateUserRequest request)
     {
-        // Check if email already exists
-        if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+        if (!_tenantContext.TenantId.HasValue)
+        {
+            throw new InvalidOperationException("Tenant context is required");
+        }
+
+        // Check if email already exists in this tenant
+        if (await _context.Users.AnyAsync(u => u.Email == request.Email && u.TenantId == _tenantContext.TenantId.Value))
         {
             throw new InvalidOperationException("Email already exists");
         }
 
         var user = new User
         {
+            TenantId = _tenantContext.TenantId.Value,
             Email = request.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
             IsActive = request.IsActive,
@@ -85,7 +107,7 @@ public class UserService : IUserService
         if (request.RoleIds.Any())
         {
             var roles = await _context.Roles
-                .Where(r => request.RoleIds.Contains(r.Id))
+                .Where(r => request.RoleIds.Contains(r.Id) && r.TenantId == _tenantContext.TenantId.Value)
                 .ToListAsync();
 
             var userRoles = roles.Select(r => new UserRole
@@ -98,12 +120,28 @@ public class UserService : IUserService
             await _context.SaveChangesAsync();
         }
 
-        return await GetUserByIdAsync(user.Id) ?? throw new InvalidOperationException("Failed to create user");
+        var result = await GetUserByIdAsync(user.Id) ?? throw new InvalidOperationException("Failed to create user");
+
+        // Trigger webhook
+        if (_webhookService != null)
+        {
+            _ = Task.Run(async () => await _webhookService.TriggerWebhookAsync(
+                Domain.Entities.WebhookEvents.UserCreated,
+                new { user = result }));
+        }
+
+        return result;
     }
 
     public async Task<UserDto?> UpdateUserAsync(int id, UpdateUserRequest request)
     {
+        if (!_tenantContext.TenantId.HasValue)
+        {
+            throw new InvalidOperationException("Tenant context is required");
+        }
+
         var user = await _context.Users
+            .Where(u => u.TenantId == _tenantContext.TenantId.Value)
             .Include(u => u.UserRoles)
             .FirstOrDefaultAsync(u => u.Id == id);
 
@@ -113,7 +151,7 @@ public class UserService : IUserService
         // Check email uniqueness if changing email
         if (!string.IsNullOrEmpty(request.Email) && request.Email != user.Email)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == request.Email))
+            if (await _context.Users.AnyAsync(u => u.Email == request.Email && u.TenantId == _tenantContext.TenantId.Value))
             {
                 throw new InvalidOperationException("Email already exists");
             }
@@ -143,7 +181,7 @@ public class UserService : IUserService
             if (request.RoleIds.Any())
             {
                 var roles = await _context.Roles
-                    .Where(r => request.RoleIds.Contains(r.Id))
+                    .Where(r => request.RoleIds.Contains(r.Id) && r.TenantId == _tenantContext.TenantId.Value)
                     .ToListAsync();
 
                 var userRoles = roles.Select(r => new UserRole
@@ -158,17 +196,43 @@ public class UserService : IUserService
 
         await _context.SaveChangesAsync();
 
-        return await GetUserByIdAsync(id);
+        var result = await GetUserByIdAsync(id);
+
+        // Trigger webhook
+        if (_webhookService != null && result != null)
+        {
+            _ = Task.Run(async () => await _webhookService.TriggerWebhookAsync(
+                Domain.Entities.WebhookEvents.UserUpdated,
+                new { user = result }));
+        }
+
+        return result;
     }
 
     public async Task<bool> DeleteUserAsync(int id)
     {
-        var user = await _context.Users.FindAsync(id);
+        if (!_tenantContext.TenantId.HasValue)
+        {
+            throw new InvalidOperationException("Tenant context is required");
+        }
+
+        var user = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == id && u.TenantId == _tenantContext.TenantId.Value);
         if (user == null)
             return false;
 
+        var userId = user.Id;
         _context.Users.Remove(user);
         await _context.SaveChangesAsync();
+
+        // Trigger webhook
+        if (_webhookService != null)
+        {
+            _ = Task.Run(async () => await _webhookService.TriggerWebhookAsync(
+                Domain.Entities.WebhookEvents.UserDeleted,
+                new { userId }));
+        }
+
         return true;
     }
 }

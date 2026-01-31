@@ -68,3 +68,6 @@ server/GatekeeperHQ.API/appsettings.Production.json
 
 # Script lock files
 .start-dev.lock
+
+# SDKS
+sdks/typescript/node_modules/

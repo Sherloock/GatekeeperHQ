@@ -24,6 +24,17 @@
 # Get the project root directory (parent of scripts folder)
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 
+# Read client port from package.json
+$packageJsonPath = Join-Path $ProjectRoot "client\package.json"
+$packageJson = Get-Content $packageJsonPath | ConvertFrom-Json
+$clientPort = 3000  # Default fallback
+if ($packageJson.scripts.dev -match '--port\s+(\d+)') {
+    $clientPort = [int]$matches[1]
+    Write-Host "Detected client port: $clientPort" -ForegroundColor Gray
+} else {
+    Write-Host "Warning: Could not parse port from package.json, using default 3000" -ForegroundColor Yellow
+}
+
 # Lock file to prevent multiple instances
 $LockFile = Join-Path $ProjectRoot ".start-dev.lock"
 
@@ -38,10 +49,10 @@ if (Test-Path $LockFile) {
 
             # Check if ports are in use
             $port5000 = Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue
-            $port3000 = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+            $portClient = Get-NetTCPConnection -LocalPort $clientPort -ErrorAction SilentlyContinue
 
-            if ($port5000 -or $port3000) {
-                Write-Host "Error: Ports 5000 or 3000 are already in use!" -ForegroundColor Red
+            if ($port5000 -or $portClient) {
+                Write-Host "Error: Ports 5000 or $clientPort are already in use!" -ForegroundColor Red
                 Write-Host "Please stop the existing services first." -ForegroundColor Yellow
                 Write-Host "To force remove lock file: Remove-Item $LockFile -Force" -ForegroundColor Yellow
                 exit 1
@@ -77,15 +88,15 @@ Write-Host ""
 # Check if ports are already in use
 Write-Host "Checking ports..." -ForegroundColor Cyan
 $port5000 = Get-NetTCPConnection -LocalPort 5000 -ErrorAction SilentlyContinue
-$port3000 = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+$portClient = Get-NetTCPConnection -LocalPort $clientPort -ErrorAction SilentlyContinue
 
 if ($port5000) {
     Write-Host "Warning: Port 5000 is already in use!" -ForegroundColor Yellow
     Write-Host "This might prevent the server from starting." -ForegroundColor Yellow
 }
 
-if ($port3000) {
-    Write-Host "Warning: Port 3000 is already in use!" -ForegroundColor Yellow
+if ($portClient) {
+    Write-Host "Warning: Port $clientPort is already in use!" -ForegroundColor Yellow
     Write-Host "This might prevent the client from starting." -ForegroundColor Yellow
 }
 
@@ -110,7 +121,7 @@ Start-Sleep -Seconds 3
 
 # Start Client
 Write-Host "Starting Client..." -ForegroundColor Green
-$clientCommand = "cd '$ProjectRoot\client'; npm install; npm run dev"
+$clientCommand = "cd '$ProjectRoot\client'; npm run dev"
 Start-Process powershell -ArgumentList "-NoExit", "-Command", $clientCommand
 
 Write-Host ""
@@ -119,7 +130,7 @@ Write-Host "All services started!" -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host "Server API: http://localhost:5000" -ForegroundColor Yellow
 Write-Host "Swagger UI: http://localhost:5000/swagger" -ForegroundColor Yellow
-Write-Host "Client: http://localhost:3000" -ForegroundColor Yellow
+Write-Host "Client: http://localhost:$clientPort" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Check the opened PowerShell windows for server and client logs." -ForegroundColor Yellow
 Write-Host "Close those windows to stop the respective services." -ForegroundColor Yellow

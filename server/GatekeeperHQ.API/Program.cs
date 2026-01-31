@@ -3,8 +3,10 @@ using GatekeeperHQ.Domain.Constants;
 using GatekeeperHQ.Infrastructure.Auth;
 using GatekeeperHQ.Infrastructure.Data;
 using GatekeeperHQ.Application.Services;
+using GatekeeperHQ.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -16,14 +18,29 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Configure Swagger with JWT support
+// Configure API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+});
+
+builder.Services.AddVersionedApiExplorer(setup =>
+{
+    setup.GroupNameFormat = "'v'VVV";
+    setup.SubstituteApiVersionInUrl = true;
+});
+
+
+// Configure Swagger with JWT support and versioning
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "GatekeeperHQ API",
-        Version = "v1",
-        Description = "RBAC Admin Panel API"
+        Version = "v1.0",
+        Description = "RBAC Admin Panel API - Version 1.0"
     });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -73,6 +90,18 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Configure Redis Caching
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
+    ?? builder.Configuration["Redis:ConnectionString"]
+    ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING")
+    ?? "localhost:6379";
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnectionString;
+    options.InstanceName = "GatekeeperHQ:";
+});
 
 // Configure JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -166,9 +195,28 @@ builder.Services.AddScoped<JwtService>(sp =>
         int.Parse(jwtSettings["ExpirationMinutes"] ?? "30")
     );
 });
+// Register Tenant Context (scoped per request)
+builder.Services.AddScoped<ITenantContext, TenantContext>();
+
+// Register HttpContextAccessor for audit logging
+builder.Services.AddHttpContextAccessor();
+
+// Register HttpClient for webhook dispatcher
+builder.Services.AddHttpClient<GatekeeperHQ.Infrastructure.Webhooks.IWebhookDispatcher, GatekeeperHQ.Infrastructure.Webhooks.WebhookDispatcher>();
+
+// Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IWebhookService, WebhookService>();
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+
+// Configure Health Checks
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>(name: "database")
+    .AddRedis(redisConnectionString, name: "redis");
 
 // Configure Rate Limiting
 builder.Services.AddMemoryCache();
@@ -202,11 +250,35 @@ builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrateg
 
 var app = builder.Build();
 
-// Seed database
+// Apply migrations and seed database
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await DatabaseSeeder.SeedAsync(context);
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        // Apply pending migrations
+        logger.LogInformation("Applying database migrations...");
+        await context.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error applying database migrations. Please ensure the database connection is correct and the database exists.");
+        throw; // Fail fast if migrations can't be applied
+    }
+
+    try
+    {
+        await DatabaseSeeder.SeedAsync(context);
+        logger.LogInformation("Database seeding completed successfully.");
+    }
+    catch (Exception ex)
+    {
+        // Log error but don't crash the application
+        logger.LogError(ex, "Error seeding database. Some seed data may be missing.");
+    }
 }
 
 // Configure the HTTP request pipeline
@@ -256,6 +328,12 @@ if (bool.Parse(rateLimitConfig["EnableRateLimiting"] ?? "true"))
     app.UseIpRateLimiting();
 }
 
+// Tenant Resolution - Early phase (for query params, subdomain, API key header)
+app.UseMiddleware<TenantResolutionMiddleware>();
+
+// API Key Authentication (before JWT authentication)
+app.UseMiddleware<ApiKeyAuthenticationMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -267,6 +345,21 @@ app.UseCors("AllowClient");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Tenant Resolution - Late phase (for JWT claims, if not already set)
+app.UseMiddleware<TenantResolutionMiddleware>();
+
 app.MapControllers();
+
+// Health Check endpoints
+app.MapHealthChecks("/health");
+
+// Readiness probe - checks all health checks (database and Redis)
+app.MapHealthChecks("/health/ready");
+
+// Liveness probe - just checks if app is running
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
 
 app.Run();
