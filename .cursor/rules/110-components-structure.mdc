@@ -1,0 +1,45 @@
+---
+description: Frontend components taxonomy and structure for GatekeeperHQ.
+globs: "client/app/**/*.tsx, client/lib/**/*.ts"
+alwaysApply: false
+---
+
+## Components structure (mandatory)
+
+- Keep `app/` feature-first with Next.js App Router conventions.
+- `(protected)/` folder for authenticated routes.
+- `lib/` for utilities, API clients, auth logic.
+- `types/` for TypeScript type definitions.
+
+## File structure
+
+```
+client/
+├── app/
+│   ├── (protected)/
+│   │   ├── dashboard/
+│   │   ├── users/
+│   │   ├── roles/
+│   │   └── layout.tsx
+│   ├── login/
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── lib/
+│   ├── api/        # API client functions
+│   ├── auth/       # Auth utilities
+│   └── utils.ts
+└── types/
+    └── api.ts      # API type definitions
+```
+
+## Naming rules
+
+- Folders: `kebab-case`.
+- Files: `kebab-case.tsx` for components, `kebab-case.ts` for utilities.
+- Exports: `PascalCase` for components.
+
+## Import rules
+
+- Prefer `@/` alias over relative paths.
+- Do not introduce barrel exports unless explicitly requested.

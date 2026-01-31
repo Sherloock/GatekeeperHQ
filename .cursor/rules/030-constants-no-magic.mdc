@@ -1,0 +1,25 @@
+---
+description: Centralize constants; avoid hardcoded routes/keys/event names/thresholds.
+globs: "client/app/**/*.ts, client/app/**/*.tsx, client/lib/**/*.ts, server/**/*.cs"
+alwaysApply: false
+---
+
+## Constants and "no magic values" (critical)
+
+- Avoid magic values: defaults, thresholds, timings, delays, labels, storage keys, route strings, query keys, event names.
+- Create constants in `client/lib/constants/*` (feature-based modules) for frontend.
+- Create constants in `GatekeeperHQ.Domain/Constants/` for backend (.NET).
+
+## Never hardcode these (Frontend)
+
+- localStorage/sessionStorage keys -> `STORAGE_KEYS`
+- custom event names -> `CUSTOM_EVENTS`
+- react-query keys -> `QUERY_KEYS`
+- route strings -> `ROUTES`
+- API endpoints -> centralized API client
+
+## Never hardcode these (Backend)
+
+- Permission strings -> `Permissions.cs`
+- Configuration values -> `appsettings.json`
+- Error messages -> constants or resource files

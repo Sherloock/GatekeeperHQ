@@ -1,0 +1,48 @@
+---
+description: Dialog action button patterns for mobile-friendly UX and consistent styling.
+globs: "client/app/**/*.tsx"
+alwaysApply: false
+---
+
+## Dialog action buttons (mandatory)
+
+### Mobile spacing
+
+- Use `gap-3` for vertical stacking on mobile, `sm:gap-2` for horizontal on desktop.
+- Pattern: `className="flex flex-col gap-3 pt-4 sm:flex-row sm:gap-2"`
+
+### Destructive actions require confirmation
+
+- **Delete** actions must show a confirmation dialog before executing.
+- Use a state variable (e.g., `showDeleteUserConfirm`) to control the confirmation dialog.
+
+### Primary/CTA buttons
+
+- The primary action button (Save, Confirm, Submit) must use `variant="default"` or `variant="brand"`.
+- Secondary actions (Cancel) use `variant="outline"`.
+- Destructive actions use `variant="destructive"`.
+
+### Confirmation dialog button order
+
+- Cancel button comes first (left on desktop, top on mobile).
+- Destructive/confirm action comes last (right on desktop, bottom on mobile).
+- Use `sm:justify-end` to align buttons to the right on desktop.
+
+### Example:
+
+```tsx
+<div className="flex flex-col gap-3 pt-4 sm:flex-row sm:justify-end sm:gap-2">
+	<Button
+		variant="outline"
+		onClick={() => setShowDeleteUserConfirm(false)}
+		className="gap-2"
+	>
+		<X size={16} />
+		Cancel
+	</Button>
+	<Button variant="destructive" onClick={handleDeleteUser} className="gap-2">
+		<Trash2 size={16} />
+		Delete
+	</Button>
+</div>
+```

@@ -1,0 +1,62 @@
+---
+description: .NET code style and architecture conventions for GatekeeperHQ backend.
+globs: "server/**/*.cs"
+alwaysApply: false
+---
+
+## Code Style
+
+- Use `PascalCase` for classes, methods, properties, constants.
+- Use `camelCase` for local variables and parameters.
+- Use `_camelCase` for private fields.
+- Use XML documentation comments for public APIs.
+
+## Architecture Layers (strict separation)
+
+- **API Layer** (`GatekeeperHQ.API/`): Controllers, DTOs only. No business logic.
+- **Application Layer** (`GatekeeperHQ.Application/`): Services contain business logic.
+- **Domain Layer** (`GatekeeperHQ.Domain/`): Entities, constants. No dependencies on other layers.
+- **Infrastructure Layer** (`GatekeeperHQ.Infrastructure/`): EF Core, JWT, external services.
+
+## Dependency Injection
+
+- Register services in `Program.cs`.
+- Use constructor injection.
+- Register as `Scoped` for DbContext and services.
+- Register as `Singleton` for stateless services (e.g., JwtService).
+
+## Error Handling
+
+- Return appropriate HTTP status codes (400, 401, 403, 404, 409, 500).
+- Use consistent error response format: `{ message: "..." }`.
+- Throw `InvalidOperationException` for business rule violations.
+
+## DTOs
+
+- Create separate DTOs for requests and responses.
+- Use Data Annotations for validation.
+- Never expose entities directly; always map to DTOs.
+
+## Example patterns
+
+```csharp
+// Controller (API Layer)
+[Authorize(Policy = Permissions.UsersRead)]
+[HttpGet("{id}")]
+public async Task<ActionResult<UserDto>> GetUser(int id)
+{
+    var user = await _userService.GetByIdAsync(id);
+    if (user == null)
+        return NotFound(new { message = "User not found" });
+    return Ok(user);
+}
+
+// Service (Application Layer)
+public async Task<UserDto?> GetByIdAsync(int id)
+{
+    var user = await _context.Users
+        .Include(u => u.Roles)
+        .FirstOrDefaultAsync(u => u.Id == id);
+    return user == null ? null : MapToDto(user);
+}
+```

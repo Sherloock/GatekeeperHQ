@@ -1,0 +1,30 @@
+---
+description: Navigation rules: centralized ROUTES and navigation utilities, no hardcoded route strings.
+globs: "client/app/**/*.tsx, client/lib/**/*.ts"
+alwaysApply: false
+---
+
+## Navigation patterns
+
+- Define all route strings in a centralized `ROUTES` constant for maintainability.
+- No hardcoded route strings in components.
+- Use `useRouter` from `next/navigation` for programmatic navigation.
+
+## Example
+
+```ts
+// lib/constants/routes.ts
+export const ROUTES = {
+	HOME: "/",
+	LOGIN: "/login",
+	DASHBOARD: "/dashboard",
+	USERS: "/users",
+	USER_EDIT: (id: string) => `/users/${id}/edit`,
+	ROLES: "/roles",
+	ROLE_EDIT: (id: string) => `/roles/${id}/edit`,
+} as const;
+
+// Usage in component
+import { ROUTES } from "@/lib/constants/routes";
+router.push(ROUTES.USER_EDIT(userId));
+```

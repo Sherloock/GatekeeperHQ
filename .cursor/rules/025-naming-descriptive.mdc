@@ -1,0 +1,48 @@
+---
+description: Descriptive naming for functions, variables, and state - names must clearly indicate what they do.
+globs: "client/app/**/*.ts, client/app/**/*.tsx, client/lib/**/*.ts"
+alwaysApply: false
+---
+
+## Descriptive naming (critical)
+
+Names must clearly and explicitly describe what the function/variable does, not just its type or a vague action.
+
+### Function names
+
+- Must describe the complete action, including scope/level when relevant
+- Bad: `handleDelete`, `deleteUser`
+- Good: `handleDeleteUserById`, `handleRevokeUserPermissions`
+
+### State variable names
+
+- Must describe what the state represents, not just its type
+- Bad: `showConfirm`, `isOpen`
+- Good: `showDeleteUserConfirm`, `isRoleEditDialogOpen`
+
+### Boolean state
+
+- Use affirmative statements: `isLoading`, `hasError`, `canEdit`
+- For dialogs/modals: `show[Action]Confirm`, `is[Feature]Open`, `show[Content]Dialog`
+
+### Examples
+
+**State variables:**
+
+```ts
+// Bad
+const [showConfirm, setShowConfirm] = useState(false);
+
+// Good
+const [showDeleteUserConfirm, setShowDeleteUserConfirm] = useState(false);
+```
+
+**Handler functions:**
+
+```ts
+// Bad
+const handleDelete = () => { ... };
+
+// Good
+const handleDeleteUserById = (userId: string) => { ... };
+```

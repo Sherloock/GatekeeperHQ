@@ -1,0 +1,43 @@
+---
+description: Buttons must include icons for better UX and visual consistency.
+globs: "client/app/**/*.tsx"
+alwaysApply: false
+---
+
+## Buttons require icons (mandatory)
+
+- **ALL** buttons with text labels must include an icon from `lucide-react`.
+- Icons should be sized with `size={16}` for standard buttons.
+- Icons should be placed before the text with `gap-2` class on the button.
+
+### Exceptions (icon-only buttons):
+
+- Buttons with `size="icon"` variant (icon-only buttons) are exempt.
+- Buttons that only show loading spinners during async operations are exempt.
+
+### Examples:
+
+#### Good (with icon):
+
+```tsx
+<Button onClick={handleSave} className="gap-2">
+  <Save size={16} />
+  Save Changes
+</Button>
+
+<Button variant="outline" onClick={handleDelete} className="gap-2">
+  <Trash2 size={16} />
+  Delete User
+</Button>
+```
+
+#### Bad (missing icon):
+
+```tsx
+<Button onClick={handleSave}>Save Changes</Button>
+```
+
+### Icon selection guidelines:
+
+- Use semantically appropriate icons (e.g., `Save` for save, `Trash2` for delete, `X` for cancel, `Check` for confirm).
+- For loading states, use `Loader2` with `animate-spin` class.

@@ -1,0 +1,12 @@
+{
+	"name": "gatekeeperhq",
+	"version": "0.1.0",
+	"private": true,
+	"description": "RBAC Admin Panel with .NET backend and Next.js frontend",
+	"scripts": {
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"husky": "^9.1.7"
+	}
+}

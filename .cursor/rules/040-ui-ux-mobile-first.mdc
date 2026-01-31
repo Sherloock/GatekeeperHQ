@@ -1,0 +1,35 @@
+---
+description: UI/UX rules for GatekeeperHQ: mobile-first, Shadcn-first, Next Image, dialogs/toasts.
+globs: "client/app/**/*.tsx"
+alwaysApply: false
+---
+
+## UI and styling (mobile-first is mandatory)
+
+- Use Shadcn UI components (`@/components/ui/*`) and Tailwind utility classes.
+- Mobile-first responsive design: toolbars/action bars stack on mobile (`flex-col`) and row on larger screens (`sm:flex-row`).
+- Prefer `w-full sm:w-auto` for toolbar buttons and actions.
+- Avoid horizontal scrolling; use `flex-wrap` or vertical stacking.
+- Standard radius: `rounded-lg` (avoid `rounded-full` unless truly needed).
+
+## Icons and images
+
+- Use Lucide icons sized with `size={20}` / `size={16}` / `size={12}` only.
+- Never use `<img>`; always use Next.js `Image` from `next/image`.
+
+## Loading and confirmations (mandatory)
+
+- **Always use Skeleton loaders** - never use full-screen loading overlays for content loading.
+- Never use `confirm()`, `alert()`, `prompt()`; use Shadcn dialogs/alert dialogs and toasts.
+
+## Inputs (mobile UX)
+
+- For number inputs use `inputMode="numeric"` when appropriate.
+- Prefer wider inputs and larger touch targets on mobile.
+
+## Accessibility (WCAG AA compliance - mandatory)
+
+- **Color contrast**: Text must meet WCAG AA contrast ratios.
+- **Keyboard navigation**: All interactive elements must be keyboard accessible.
+- **ARIA labels**: Use `aria-label` for icon-only buttons.
+- **Form accessibility**: All inputs must have associated labels.

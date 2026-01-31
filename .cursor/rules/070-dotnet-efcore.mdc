@@ -1,0 +1,43 @@
+---
+description: Entity Framework Core database practices for GatekeeperHQ backend.
+globs: "server/**/*.cs"
+alwaysApply: false
+---
+
+## Database (Entity Framework Core)
+
+- Use EF Core's type-safe queries; avoid raw SQL unless necessary.
+- Always use async/await for all database operations (`FirstOrDefaultAsync`, `SaveChangesAsync`).
+- Use `Include()` for related entities when needed.
+- Use `Select()` to only fetch needed fields for performance.
+- Handle database errors gracefully with user-friendly messages.
+
+## Migrations
+
+- Always create migrations for schema changes.
+- Use descriptive migration names.
+- Never edit existing migrations (create new ones).
+- Test migrations on development before applying to production.
+
+## Repository pattern
+
+- DbContext is registered as Scoped.
+- Use services for business logic, not controllers.
+- Configure relationships in `OnModelCreating()` in DbContext.
+
+## Common patterns
+
+```csharp
+// Good - async with error handling
+var user = await _context.Users
+    .Include(u => u.Roles)
+    .FirstOrDefaultAsync(u => u.Id == userId);
+
+if (user == null)
+    return NotFound(new { message = "User not found" });
+
+// Good - select only needed fields
+var users = await _context.Users
+    .Select(u => new UserDto { Id = u.Id, Email = u.Email })
+    .ToListAsync();
+```

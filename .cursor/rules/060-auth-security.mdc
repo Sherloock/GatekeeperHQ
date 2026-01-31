@@ -1,0 +1,33 @@
+---
+description: Auth and security guardrails for frontend API calls and backend endpoints.
+globs: "client/lib/api/**/*.ts, client/lib/auth/**/*.ts, server/**/*.cs"
+alwaysApply: false
+---
+
+## Authentication (JWT)
+
+- JWT tokens are stored in localStorage (client-side).
+- Axios interceptor adds token to all requests automatically.
+- Handle 401 errors by redirecting to login.
+- Never rely solely on client-side permission checks; always verify on backend.
+
+## Frontend security
+
+- Check permissions with `canAccess(user, permission)` for UI visibility.
+- Permission checks on frontend are UX only; backend must enforce.
+- Handle auth errors gracefully without leaking sensitive details.
+
+## Backend security (.NET)
+
+- Use `[Authorize(Policy = Permissions.Xxx)]` on controllers/actions.
+- Always validate user input (Data Annotations or FluentValidation).
+- Use parameterized queries (EF Core handles this automatically).
+- Never log passwords or tokens.
+- Use BCrypt for password hashing.
+- JWT tokens should have appropriate expiration.
+
+## Security best practices
+
+- Sanitize user inputs (Zod at frontend boundaries).
+- Implement proper CORS handling.
+- Use HTTPS in production.

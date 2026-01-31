@@ -1,0 +1,41 @@
+---
+description: GatekeeperHQ project context and preferred tech stack/library choices.
+alwaysApply: false
+---
+
+## Project context
+
+- This project is **GatekeeperHQ** (RBAC Admin Panel).
+- Users manage roles, permissions, and users through a web interface.
+
+## Architecture
+
+- **Backend**: .NET 8 ASP.NET Core Web API (`server/` directory)
+- **Frontend**: Next.js 14 with TypeScript (`client/` directory)
+- **Database**: PostgreSQL (via Docker)
+- **Auth**: JWT-based authentication
+
+## Backend tech stack
+
+- ASP.NET Core 8 Web API
+- Entity Framework Core (EF Core) with PostgreSQL
+- BCrypt for password hashing
+- JWT for authentication/authorization
+- Layered architecture (API → Application → Domain ← Infrastructure)
+
+## Frontend tech stack
+
+- Next.js App Router + React + TypeScript
+- TailwindCSS + Shadcn UI (if needed)
+- Lucide icons
+- React Hook Form + Zod
+- Axios for API calls
+- `@tanstack/react-query`
+
+## Syntax / conventions
+
+- Prefer import aliases (`@/`) over deep relative paths in frontend.
+- Always merge Tailwind classes with `cn`.
+- Use `!!x` instead of `Boolean(x)`.
+- Toasts: include an `id`, e.g. `toast.success("...", { id: "..." })`.
+- If using `useSearchParams()`, wrap it in a Suspense boundary (separate component + `<Suspense fallback={...}>`).
