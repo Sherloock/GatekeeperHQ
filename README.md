@@ -1,15 +1,18 @@
-# GatekeeperHQ - RBAC Admin Panel
+# GatekeeperHQ
 
-A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js client and ASP.NET Core server.
+A multi-tenant Role-Based Access Control (RBAC) service built with Next.js and ASP.NET Core.
 
 ## Features
 
-- **Authentication**: JWT-based authentication with secure password hashing
-- **Authorization**: Permission-based access control with role management
-- **User Management**: Create, read, update, and delete users with role assignment
-- **Role Management**: Create and manage roles with permission assignment
-- **Permission System**: Fine-grained permission control for features and actions
-- **Modern UI**: Clean, responsive admin interface built with Next.js and Tailwind CSS
+- **Multi-Tenancy**: Subdomain, API key, or JWT-based tenant resolution
+- **Authentication**: JWT tokens with refresh token support
+- **Authorization**: Permission-based access control with roles
+- **User Management**: CRUD operations with role assignment
+- **Role Management**: Create and manage roles with permissions
+- **API Keys**: Scoped API keys for service-to-service auth
+- **Webhooks**: Subscribe to events (user.created, role.updated, etc.)
+- **Invitations**: Invite users to tenants via email tokens
+- **TypeScript SDK**: Client SDK for easy integration
 
 ## Architecture
 
@@ -31,276 +34,153 @@ A complete Role-Based Access Control (RBAC) Admin Panel built with Next.js clien
 
 ## Tech Stack
 
-### Server
-- .NET 8
-- ASP.NET Core Web API
-- Entity Framework Core
-- PostgreSQL
-- JWT Bearer Authentication
-- BCrypt for password hashing
-- Swagger/OpenAPI
-
-### Client
-- Next.js 14 (App Router)
-- TypeScript
-- TanStack Query
-- React Hook Form
-- Zod for validation
-- Tailwind CSS
-- Axios
+| Server                | Client          |
+| --------------------- | --------------- |
+| .NET 8 / ASP.NET Core | Next.js 14      |
+| Entity Framework Core | TanStack Query  |
+| PostgreSQL            | React Hook Form |
+| JWT + API Key Auth    | Zod             |
+| BCrypt                | Tailwind CSS    |
 
 ## Prerequisites
 
-- .NET SDK 8.0 or later
-- Node.js 18+ (LTS recommended)
+- .NET SDK 8.0+
+- Node.js 18+
 - PostgreSQL 15+ (or Docker)
 - EF Core Tools: `dotnet tool install --global dotnet-ef`
 
 ## Quick Start
 
-### Option 1: Using Development Scripts (Recommended)
+### 1. Database
 
-The easiest way to start all services is using the provided PowerShell script:
-
-```powershell
-.\scripts\start-dev.ps1
-```
-
-**Note:** PowerShell is cross-platform and works on Windows, Linux, and macOS. If you get an execution policy error on Windows, run:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-The script will automatically:
-1. Start PostgreSQL (Docker)
-2. Start the Server API (in a new window)
-3. Install client dependencies and start the Client (in a new window)
-
-See [scripts/README.md](scripts/README.md) for detailed documentation.
-
----
-
-### Option 2: Manual Setup
-
-### 1. Database Setup
-
-**Option A: Using Docker (Recommended)**
 ```bash
 docker-compose up -d
 ```
 
-**Option B: Local PostgreSQL**
-```bash
-createdb gatekeeperhq
-```
-
-### 2. Server Setup
+### 2. Server
 
 ```bash
 cd server
-
-# Restore NuGet packages
 dotnet restore
-
-# Update connection string in appsettings.Development.json if needed
-# Default: Host=localhost;Port=5432;Database=gatekeeperhq;Username=postgres;Password=postgres
-
-# Run database migrations (EF Core will create the database automatically)
 dotnet ef database update --project GatekeeperHQ.Infrastructure --startup-project GatekeeperHQ.API
-
-# Run the API
 dotnet run --project GatekeeperHQ.API
 ```
 
-The API will be available at `http://localhost:5000` (or the port configured in `launchSettings.json`).
+API: `http://localhost:5000` | Swagger: `http://localhost:5000/swagger`
 
-Swagger UI: `http://localhost:5000/swagger`
-
-### 3. Client Setup
+### 3. Client
 
 ```bash
 cd client
-
-# Install dependencies
 npm install
-# or
-pnpm install
-
-# Set API URL (optional, defaults to http://localhost:5000/api)
-# Create .env.local:
-# NEXT_PUBLIC_API_URL=http://localhost:5000/api
-
-# Run the development server
 npm run dev
-# or
-pnpm dev
 ```
 
-The client will be available at `http://localhost:3000`.
+Client: `http://localhost:3000`
 
 ## Default Credentials
-
-After seeding the database, you can login with:
 
 - **Email**: `admin@gatekeeperhq.com`
 - **Password**: `Admin123!`
 
-This user has the "Admin" role with all permissions.
+To reset admin password:
 
-### Resetting Admin Password
-
-If you need to reset the admin password back to the default (`Admin123!`), you can use one of these methods:
-
-**Option 1: Using PowerShell Script (Recommended)**
 ```powershell
 .\server\scripts\reset-admin-password.ps1
 ```
-
-**Option 2: Using Console Application**
-```bash
-cd server/scripts/ResetAdminPassword
-dotnet run
-```
-
-**Option 3: Using C# Script (requires dotnet-script)**
-```bash
-dotnet script server/scripts/ResetAdminPassword.cs
-```
-
-All methods will reset the password for `admin@gatekeeperhq.com` to `Admin123!`.
 
 ## Project Structure
 
 ```
 GatekeeperHQ/
-├── server/
-│   ├── GatekeeperHQ.API/          # Presentation layer (Controllers, DTOs)
-│   ├── GatekeeperHQ.Application/   # Business logic (Services)
-│   ├── GatekeeperHQ.Domain/       # Entities and constants
-│   ├── GatekeeperHQ.Infrastructure/ # EF Core, JWT, Password hashing
-│   └── GatekeeperHQ.sln           # Solution file
-├── client/
-│   ├── app/                        # Next.js App Router
-│   ├── components/                 # UI components
-│   ├── features/                   # Feature modules
-│   ├── lib/                        # API client, auth utils
-│   └── types/                      # TypeScript types
-├── docker-compose.yml              # PostgreSQL container
-└── README.md
+├── client/                     # Next.js frontend
+│   ├── app/                    # App Router pages
+│   │   ├── (protected)/        # Auth-guarded routes
+│   │   │   ├── dashboard/
+│   │   │   ├── users/
+│   │   │   ├── roles/
+│   │   │   └── tenants/
+│   │   ├── login/
+│   │   └── invite/[token]/     # Invitation acceptance
+│   ├── components/             # UI components
+│   ├── lib/
+│   │   ├── api/                # API client modules
+│   │   └── auth/               # Auth hooks & utilities
+│   └── types/
+├── server/                     # .NET backend
+│   ├── GatekeeperHQ.API/       # Controllers, DTOs, Middleware
+│   ├── GatekeeperHQ.Application/  # Services, business logic
+│   ├── GatekeeperHQ.Domain/    # Entities, constants
+│   ├── GatekeeperHQ.Infrastructure/  # EF Core, JWT, seeding
+│   └── scripts/                # Database utilities
+├── sdks/
+│   └── typescript/             # TypeScript client SDK
+├── docs/
+│   ├── API.md                  # Full API reference
+│   └── INTEGRATION.md          # SDK integration guide
+└── docker-compose.yml
 ```
 
-## API Endpoints
+## API Overview
 
-### Authentication
-- `POST /api/auth/login` - Login (public)
-- `GET /api/auth/me` - Get current user with roles/permissions (protected)
+Full API documentation: [docs/API.md](docs/API.md)
 
-### Users
-- `GET /api/users` - List users (requires: `users.view`)
-- `GET /api/users/{id}` - Get user details (requires: `users.view`)
-- `POST /api/users` - Create user (requires: `users.create`)
-- `PUT /api/users/{id}` - Update user (requires: `users.edit`)
-- `DELETE /api/users/{id}` - Delete user (requires: `users.delete`)
+| Endpoint         | Description                       |
+| ---------------- | --------------------------------- |
+| `/auth/*`        | Login, refresh, current user      |
+| `/users/*`       | User CRUD (requires permissions)  |
+| `/roles/*`       | Role CRUD + permission management |
+| `/permissions`   | List available permissions        |
+| `/tenants/*`     | Tenant management                 |
+| `/api-keys/*`    | API key management                |
+| `/webhooks/*`    | Webhook subscriptions             |
+| `/invitations/*` | User invitations                  |
 
-### Roles
-- `GET /api/roles` - List roles (requires: `roles.view`)
-- `GET /api/roles/{id}` - Get role with permissions (requires: `roles.view`)
-- `POST /api/roles` - Create role (requires: `roles.manage`)
-- `PUT /api/roles/{id}` - Update role (requires: `roles.manage`)
-- `DELETE /api/roles/{id}` - Delete role (requires: `roles.manage`)
+### Authentication Methods
 
-### Role Permissions
-- `GET /api/roles/{id}/permissions` - Get role permissions (requires: `roles.view`)
-- `POST /api/roles/{id}/permissions` - Add permission to role (requires: `roles.manage`)
-- `DELETE /api/roles/{id}/permissions/{permissionId}` - Remove permission (requires: `roles.manage`)
+```
+# JWT Token
+Authorization: Bearer <token>
 
-### Permissions
-- `GET /api/permissions` - List all permissions (requires: `permissions.view`)
+# API Key
+X-API-Key: gk_your_api_key
+```
 
-## Permissions
+## SDK Usage
 
-The system includes the following permissions:
+```typescript
+import { GatekeeperHQClient } from "@gatekeeperhq/sdk";
 
-- `users.view` - View users list and details
-- `users.edit` - Edit user information
-- `users.delete` - Delete users
-- `users.create` - Create new users
-- `roles.view` - View roles list and details
-- `roles.manage` - Create, edit, and delete roles
-- `permissions.view` - View available permissions
-- `dashboard.access` - Access dashboard
-- `settings.access` - Access settings
+const client = new GatekeeperHQClient({
+	baseUrl: "http://localhost:5000/api/v1",
+	apiKey: "gk_your_api_key",
+	version: "1",
+});
 
-## Security Considerations
+const users = await client.users.getAll();
+```
 
-1. **Password Storage**: Passwords are hashed using BCrypt with salt
-2. **JWT Expiry**: Access tokens expire after 30 minutes (configurable)
-3. **HTTPS**: Required in production
-4. **CORS**: Configured for client origin only
-5. **Input Validation**: All DTOs validated using Data Annotations
-6. **SQL Injection**: EF Core uses parameterized queries (automatic protection)
-7. **XSS**: React escapes by default, but user inputs should be sanitized
+See [docs/INTEGRATION.md](docs/INTEGRATION.md) for full SDK documentation.
 
 ## Development
 
-### Client
+### Server (watch mode)
 
 ```bash
 cd server
-
-# Watch mode (auto-reload on changes)
 dotnet watch run --project GatekeeperHQ.API
-
-# Create migration
-dotnet ef migrations add MigrationName --project GatekeeperHQ.Infrastructure --startup-project GatekeeperHQ.API
-
-# Apply migrations
-dotnet ef database update --project GatekeeperHQ.Infrastructure --startup-project GatekeeperHQ.API
 ```
 
-### Client
+### Migrations
 
 ```bash
-cd client
+# Create
+dotnet ef migrations add MigrationName --project GatekeeperHQ.Infrastructure --startup-project GatekeeperHQ.API
 
-# Development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
+# Apply
+dotnet ef database update --project GatekeeperHQ.Infrastructure --startup-project GatekeeperHQ.API
 ```
-
-## Database Migrations
-
-The database is automatically seeded on first run with:
-- All permissions
-- Admin role (with all permissions)
-- User role (basic role)
-- Admin user (admin@gatekeeperhq.com / Admin123!)
-
-## Troubleshooting
-
-### Database Connection Issues
-- Ensure PostgreSQL is running
-- Check connection string in `appsettings.Development.json`
-- Verify database exists: `psql -U postgres -l`
-
-### CORS Issues
-- Ensure server CORS is configured for client origin
-- Check `Program.cs` CORS policy
-
-### JWT Token Issues
-- Verify JWT secret key is set in `appsettings.json`
-- Check token expiration time
-- Ensure client is sending token in Authorization header
 
 ## License
 
 This project is for demonstration purposes.
-
-## Contributing
-
-This is a portfolio/demo project. Feel free to fork and modify for your own use.
