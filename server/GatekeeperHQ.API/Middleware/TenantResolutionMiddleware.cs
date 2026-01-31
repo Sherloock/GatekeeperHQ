@@ -56,7 +56,22 @@ public class TenantResolutionMiddleware
             }
         }
 
-        // 2. Try from API key header (X-API-Key)
+        // 2. Try from X-Tenant-Id header (for super admin tenant selection)
+        if (tenantId == null && context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader))
+        {
+            if (int.TryParse(tenantIdHeader.ToString(), out var headerTenantId))
+            {
+                // Verify the tenant exists and is active
+                var tenantExists = await dbContext.Tenants
+                    .AnyAsync(t => t.Id == headerTenantId && t.IsActive);
+                if (tenantExists)
+                {
+                    tenantId = headerTenantId;
+                }
+            }
+        }
+
+        // 3. Try from API key header (X-API-Key)
         // Note: This is also handled by ApiKeyAuthenticationMiddleware, but we check here too
         // in case the middleware runs before ApiKeyAuthenticationMiddleware
         if (tenantId == null && context.Request.Headers.TryGetValue("X-API-Key", out var apiKeyHeader))
@@ -73,7 +88,7 @@ public class TenantResolutionMiddleware
             }
         }
 
-        // 3. Try from query parameter (for development/testing)
+        // 4. Try from query parameter (for development/testing)
         // This must work before authentication for login endpoint
         if (tenantId == null && context.Request.Query.TryGetValue("tenantId", out var tenantIdQuery))
         {
@@ -83,7 +98,7 @@ public class TenantResolutionMiddleware
             }
         }
 
-        // 4. Try from JWT claim (for authenticated users)
+        // 5. Try from JWT claim (for authenticated users)
         // This only works after UseAuthentication() has run
         if (tenantId == null && context.User.Identity?.IsAuthenticated == true)
         {

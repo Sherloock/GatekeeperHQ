@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<Invitation> Invitations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -38,12 +39,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
+            entity.HasIndex(e => e.Email).IsUnique();  // Email unique globally (Super Admin has no tenant)
             entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
             entity.Property(e => e.PasswordHash).IsRequired();
+            entity.Property(e => e.IsSuperAdmin).HasDefaultValue(false);
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
                 .HasForeignKey(e => e.TenantId)
+                .IsRequired(false)  // TenantId is nullable for Super Admin
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -125,6 +128,7 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Tenant)
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
+                .IsRequired(false)  // TenantId is nullable for Super Admin
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
@@ -157,6 +161,32 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Tenant)
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Invitation configuration
+        modelBuilder.Entity<Invitation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Email });
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(100);
+            entity.Ignore(e => e.IsExpired);
+            entity.Ignore(e => e.IsAccepted);
+            entity.Ignore(e => e.IsPending);
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Role)
+                .WithMany()
+                .HasForeignKey(e => e.RoleId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

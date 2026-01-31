@@ -1,16 +1,16 @@
 using System.Text;
+using AspNetCoreRateLimit;
+using GatekeeperHQ.API.Middleware;
+using GatekeeperHQ.Application.Services;
 using GatekeeperHQ.Domain.Constants;
 using GatekeeperHQ.Infrastructure.Auth;
 using GatekeeperHQ.Infrastructure.Data;
-using GatekeeperHQ.Application.Services;
-using GatekeeperHQ.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using AspNetCoreRateLimit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,7 +77,7 @@ builder.Services.AddCors(options =>
             ?? new[] { "http://localhost:3000", "http://localhost:3001" };
 
         policy.WithOrigins(allowedOrigins)
-              .WithHeaders("Content-Type", "Authorization", "X-Requested-With")
+              .WithHeaders("Content-Type", "Authorization", "X-Requested-With", "X-Tenant-Id")
               .WithMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
               .AllowCredentials();
     });
@@ -162,10 +162,24 @@ builder.Services.AddAuthorization(options =>
         policy.Requirements.Add(new PermissionRequirement(Permissions.RolesManage)));
     options.AddPolicy(Permissions.PermissionsView, policy =>
         policy.Requirements.Add(new PermissionRequirement(Permissions.PermissionsView)));
+    options.AddPolicy(Permissions.PermissionsCreate, policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permissions.PermissionsCreate)));
+    options.AddPolicy(Permissions.PermissionsManage, policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permissions.PermissionsManage)));
     options.AddPolicy(Permissions.DashboardAccess, policy =>
         policy.Requirements.Add(new PermissionRequirement(Permissions.DashboardAccess)));
     options.AddPolicy(Permissions.SettingsAccess, policy =>
         policy.Requirements.Add(new PermissionRequirement(Permissions.SettingsAccess)));
+
+    // Super Admin permissions
+    options.AddPolicy(Permissions.TenantsView, policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permissions.TenantsView)));
+    options.AddPolicy(Permissions.TenantsCreate, policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permissions.TenantsCreate)));
+    options.AddPolicy(Permissions.TenantsManage, policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permissions.TenantsManage)));
+    options.AddPolicy(Permissions.InvitationsManage, policy =>
+        policy.Requirements.Add(new PermissionRequirement(Permissions.InvitationsManage)));
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
@@ -209,6 +223,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<IInvitationService, InvitationService>();
 builder.Services.AddScoped<IWebhookService, WebhookService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();

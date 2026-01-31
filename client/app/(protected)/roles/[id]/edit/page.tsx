@@ -1,190 +1,222 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { rolesApi } from '@/lib/api/roles';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import { permissionsApi } from '@/lib/api/permissions';
-import { useAuth } from '@/lib/auth/useAuth';
+import { rolesApi } from '@/lib/api/roles';
 import { canAccess } from '@/lib/auth/canAccess';
-import { useForm } from 'react-hook-form';
+import { useAuth } from '@/lib/auth/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 const updateRoleSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name must be less than 100 characters').optional(),
-  description: z.string().optional(),
-  permissionIds: z.array(z.number()).optional(),
+	name: z
+		.string()
+		.min(1, 'Name is required')
+		.max(100, 'Name must be less than 100 characters')
+		.optional(),
+	description: z.string().optional(),
+	permissionIds: z.array(z.number()).optional(),
 });
 
 type UpdateRoleFormData = z.infer<typeof updateRoleSchema>;
 
 export default function EditRolePage() {
-  const router = useRouter();
-  const params = useParams();
-  const roleId = parseInt(params.id as string);
-  const { user: currentUser } = useAuth();
-  const queryClient = useQueryClient();
-  const [error, setError] = useState<string | null>(null);
+	const router = useRouter();
+	const params = useParams();
+	const roleId = parseInt(params.id as string);
+	const { user: currentUser } = useAuth();
+	const queryClient = useQueryClient();
+	const [error, setError] = useState<string | null>(null);
 
-  const { data: role, isLoading } = useQuery({
-    queryKey: ['roles', roleId],
-    queryFn: () => rolesApi.getById(roleId),
-  });
+	const { data: role, isLoading } = useQuery({
+		queryKey: ['roles', roleId],
+		queryFn: () => rolesApi.getById(roleId),
+	});
 
-  const { data: permissions } = useQuery({
-    queryKey: ['permissions'],
-    queryFn: permissionsApi.getAll,
-  });
+	const { data: permissions } = useQuery({
+		queryKey: ['permissions'],
+		queryFn: permissionsApi.getAll,
+	});
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    watch,
-    setValue,
-  } = useForm<UpdateRoleFormData>({
-    resolver: zodResolver(updateRoleSchema),
-  });
+	const {
+		register,
+		handleSubmit,
+		formState: { errors },
+		reset,
+		watch,
+		setValue,
+	} = useForm<UpdateRoleFormData>({
+		resolver: zodResolver(updateRoleSchema),
+	});
 
-  const selectedPermissionIds = watch('permissionIds') || [];
+	const selectedPermissionIds = watch('permissionIds') || [];
 
-  useEffect(() => {
-    if (role && permissions) {
-      const rolePermissionIds = permissions
-        .filter((p) => role.permissions.includes(p.key))
-        .map((p) => p.id);
-      reset({
-        name: role.name,
-        description: role.description || '',
-        permissionIds: rolePermissionIds,
-      });
-    }
-  }, [role, permissions, reset]);
+	useEffect(() => {
+		if (role && permissions) {
+			const rolePermissionIds = permissions
+				.filter((p) => role.permissions.includes(p.key))
+				.map((p) => p.id);
+			reset({
+				name: role.name,
+				description: role.description || '',
+				permissionIds: rolePermissionIds,
+			});
+		}
+	}, [role, permissions, reset]);
 
-  const updateMutation = useMutation({
-    mutationFn: (data: UpdateRoleFormData) => rolesApi.update(roleId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] });
-      router.push('/roles');
-    },
-    onError: (err: any) => {
-      setError(err.response?.data?.message || 'Failed to update role');
-    },
-  });
+	const updateRoleMutation = useMutation({
+		mutationFn: (data: UpdateRoleFormData) => rolesApi.update(roleId, data),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['roles'] });
+			router.push('/roles');
+		},
+		onError: (err: unknown) => {
+			const error = err as { response?: { data?: { message?: string } } };
+			setError(error.response?.data?.message || 'Failed to update role');
+		},
+	});
 
-  if (!currentUser || !canAccess(currentUser, 'roles.manage')) {
-    return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-        <p className="mt-4 text-gray-600">You don't have permission to edit roles.</p>
-      </div>
-    );
-  }
+	if (!currentUser || !canAccess(currentUser, 'roles.manage')) {
+		return (
+			<div className="py-12 text-center">
+				<h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+				<p className="mt-4 text-muted-foreground">You don&apos;t have permission to edit roles.</p>
+			</div>
+		);
+	}
 
-  if (isLoading) {
-    return <div className="text-center py-12">Loading role...</div>;
-  }
+	if (isLoading) {
+		return (
+			<div className="mx-auto max-w-2xl space-y-6">
+				<Skeleton className="h-10 w-24" />
+				<Card>
+					<CardHeader>
+						<Skeleton className="h-6 w-32" />
+						<Skeleton className="h-4 w-48" />
+					</CardHeader>
+					<CardContent className="space-y-4">
+						<Skeleton className="h-10 w-full" />
+						<Skeleton className="h-20 w-full" />
+						<Skeleton className="h-48 w-full" />
+					</CardContent>
+				</Card>
+			</div>
+		);
+	}
 
-  if (!role) {
-    return <div className="text-center py-12">Role not found</div>;
-  }
+	if (!role) {
+		return (
+			<div className="py-12 text-center">
+				<h1 className="text-2xl font-bold text-destructive">Role Not Found</h1>
+				<Button variant="link" asChild className="mt-4">
+					<Link href="/roles">Back to Roles</Link>
+				</Button>
+			</div>
+		);
+	}
 
-  const onSubmit = (data: UpdateRoleFormData) => {
-    setError(null);
-    updateMutation.mutate(data);
-  };
+	const handleUpdateRoleSubmit = (data: UpdateRoleFormData) => {
+		setError(null);
+		updateRoleMutation.mutate(data);
+	};
 
-  const togglePermission = (permissionId: number) => {
-    const current = selectedPermissionIds;
-    const newPermissionIds = current.includes(permissionId)
-      ? current.filter((id) => id !== permissionId)
-      : [...current, permissionId];
-    setValue('permissionIds', newPermissionIds);
-  };
+	const togglePermission = (permissionId: number) => {
+		const current = selectedPermissionIds;
+		const newPermissionIds = current.includes(permissionId)
+			? current.filter((id) => id !== permissionId)
+			: [...current, permissionId];
+		setValue('permissionIds', newPermissionIds);
+	};
 
-  return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Edit Role</h1>
+	return (
+		<div className="mx-auto max-w-2xl space-y-6">
+			<div className="flex items-center gap-4">
+				<Button variant="ghost" size="sm" asChild>
+					<Link href="/roles">
+						<ArrowLeft className="mr-2 h-4 w-4" />
+						Back
+					</Link>
+				</Button>
+			</div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
+			<Card>
+				<CardHeader>
+					<CardTitle>Edit Role</CardTitle>
+					<CardDescription>Update role information and permissions</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{error && (
+						<div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+							{error}
+						</div>
+					)}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white shadow rounded-lg p-6 space-y-4">
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-            Name
-          </label>
-          <input
-            {...register('name')}
-            type="text"
-            id="name"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-          )}
-        </div>
+					<form onSubmit={handleSubmit(handleUpdateRoleSubmit)} className="space-y-6">
+						<div className="space-y-2">
+							<Label htmlFor="name">Name</Label>
+							<Input {...register('name')} id="name" type="text" />
+							{errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+						</div>
 
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <textarea
-            {...register('description')}
-            id="description"
-            rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+						<div className="space-y-2">
+							<Label htmlFor="description">Description</Label>
+							<textarea
+								{...register('description')}
+								id="description"
+								rows={3}
+								className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							/>
+						</div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
-          <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-md p-4 space-y-2">
-            {permissions?.map((permission) => (
-              <label key={permission.id} className="flex items-start">
-                <input
-                  type="checkbox"
-                  checked={selectedPermissionIds.includes(permission.id)}
-                  onChange={() => togglePermission(permission.id)}
-                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <div className="ml-2">
-                  <span className="text-sm font-medium text-gray-700">{permission.key}</span>
-                  {permission.description && (
-                    <p className="text-xs text-gray-500">{permission.description}</p>
-                  )}
-                </div>
-              </label>
-            ))}
-          </div>
-          <input
-            type="hidden"
-            {...register('permissionIds')}
-          />
-        </div>
+						<div className="space-y-2">
+							<Label>Permissions</Label>
+							<div className="max-h-64 space-y-3 overflow-y-auto rounded-md border p-4">
+								{permissions?.map((permission) => (
+									<div key={permission.id} className="flex items-start space-x-2">
+										<Checkbox
+											id={`permission-${permission.id}`}
+											checked={selectedPermissionIds.includes(permission.id)}
+											onCheckedChange={() => togglePermission(permission.id)}
+											className="mt-0.5"
+										/>
+										<div className="grid gap-0.5 leading-none">
+											<Label
+												htmlFor={`permission-${permission.id}`}
+												className="cursor-pointer font-medium"
+											>
+												{permission.key}
+											</Label>
+											{permission.description && (
+												<p className="text-xs text-muted-foreground">{permission.description}</p>
+											)}
+										</div>
+									</div>
+								))}
+							</div>
+						</div>
 
-        <div className="flex space-x-4">
-          <button
-            type="submit"
-            disabled={updateMutation.isPending}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {updateMutation.isPending ? 'Updating...' : 'Update Role'}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  );
+						<div className="flex gap-4">
+							<Button type="submit" disabled={updateRoleMutation.isPending}>
+								{updateRoleMutation.isPending ? 'Updating...' : 'Update Role'}
+							</Button>
+							<Button type="button" variant="outline" onClick={() => router.back()}>
+								Cancel
+							</Button>
+						</div>
+					</form>
+				</CardContent>
+			</Card>
+		</div>
+	);
 }

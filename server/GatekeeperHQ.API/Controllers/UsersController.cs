@@ -1,4 +1,5 @@
 using GatekeeperHQ.API.DTOs.Users;
+using GatekeeperHQ.API.Filters;
 using GatekeeperHQ.Application.Services;
 using GatekeeperHQ.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +11,7 @@ namespace GatekeeperHQ.API.Controllers;
 [Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
 [Authorize]
+[RequireTenantContext]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;

@@ -1,5 +1,6 @@
 using GatekeeperHQ.API.DTOs.Tenants;
 using GatekeeperHQ.Application.Services;
+using GatekeeperHQ.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +20,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = Permissions.TenantsView)]
     public async Task<ActionResult<List<DTOs.Tenants.TenantDto>>> GetTenants()
     {
         var tenants = await _tenantService.GetAllTenantsAsync();
@@ -35,6 +37,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [Authorize(Policy = Permissions.TenantsView)]
     public async Task<ActionResult<DTOs.Tenants.TenantDto>> GetTenant(int id)
     {
         var tenant = await _tenantService.GetTenantByIdAsync(id);
@@ -54,6 +57,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.TenantsCreate)]
     public async Task<ActionResult<DTOs.Tenants.TenantDto>> CreateTenant([FromBody] DTOs.Tenants.CreateTenantRequest request)
     {
         try
@@ -82,6 +86,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPut("{id}")]
+    [Authorize(Policy = Permissions.TenantsManage)]
     public async Task<ActionResult<DTOs.Tenants.TenantDto>> UpdateTenant(int id, [FromBody] DTOs.Tenants.UpdateTenantRequest request)
     {
         try
@@ -113,6 +118,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Policy = Permissions.TenantsManage)]
     public async Task<IActionResult> DeleteTenant(int id)
     {
         var result = await _tenantService.DeleteTenantAsync(id);
@@ -123,6 +129,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPost("{id}/regenerate-api-key")]
+    [Authorize(Policy = Permissions.TenantsManage)]
     public async Task<ActionResult<RegenerateApiKeyResponse>> RegenerateApiKey(int id)
     {
         try

@@ -1,4 +1,5 @@
 using GatekeeperHQ.API.DTOs.Roles;
+using GatekeeperHQ.API.Filters;
 using GatekeeperHQ.Application.Services;
 using GatekeeperHQ.Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +11,7 @@ namespace GatekeeperHQ.API.Controllers;
 [Route("api/v{version:apiVersion}/[controller]")]
 [ApiVersion("1.0")]
 [Authorize]
+[RequireTenantContext]
 public class RolesController : ControllerBase
 {
     private readonly IRoleService _roleService;

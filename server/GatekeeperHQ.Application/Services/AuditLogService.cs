@@ -1,7 +1,7 @@
+using System.Text.Json;
 using GatekeeperHQ.Domain.Entities;
 using GatekeeperHQ.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
-using System.Text.Json;
 
 namespace GatekeeperHQ.Application.Services;
 

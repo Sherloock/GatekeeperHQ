@@ -18,6 +18,16 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
+        // Super Admin bypass - grant all permissions
+        var isSuperAdminClaim = context.User.Claims
+            .FirstOrDefault(c => c.Type == "is_super_admin")?.Value;
+
+        if (isSuperAdminClaim == "true")
+        {
+            context.Succeed(requirement);
+            return Task.CompletedTask;
+        }
+
         var permissions = context.User.Claims
             .Where(c => c.Type == "permission")
             .Select(c => c.Value)

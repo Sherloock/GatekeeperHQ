@@ -1,8 +1,8 @@
+using System.Security.Claims;
 using GatekeeperHQ.API.DTOs.Auth;
 using GatekeeperHQ.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace GatekeeperHQ.API.Controllers;
 
@@ -40,7 +40,8 @@ public class AuthController : ControllerBase
             RefreshToken = result.RefreshToken,
             UserId = result.UserId,
             Email = result.Email,
-            Permissions = result.Permissions
+            Permissions = result.Permissions,
+            IsSuperAdmin = result.IsSuperAdmin
         });
     }
 
@@ -110,6 +111,7 @@ public class AuthController : ControllerBase
             Id = user.Id,
             Email = user.Email,
             IsActive = user.IsActive,
+            IsSuperAdmin = user.IsSuperAdmin,
             Roles = user.Roles,
             Permissions = user.Permissions
         });

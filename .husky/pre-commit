@@ -11,6 +11,39 @@ cd ..
 echo "✅ Linting passed"
 echo ""
 
+### FORMATTING (Backend - .NET) ###
+echo "📝 Checking .NET formatting (server)..."
+
+# Get staged .cs files
+STAGED_CS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.cs$' || true)
+
+if [ -n "$STAGED_CS_FILES" ]; then
+    echo "   Found staged .cs files, running dotnet format..."
+
+    # Run dotnet format on the solution
+    cd server
+    dotnet format GatekeeperHQ.sln --include $STAGED_CS_FILES --verbosity quiet
+    FORMAT_EXIT_CODE=$?
+    cd ..
+
+    if [ $FORMAT_EXIT_CODE -ne 0 ]; then
+        echo "❌ dotnet format failed"
+        exit 1
+    fi
+
+    # Re-add formatted files to staging
+    for file in $STAGED_CS_FILES; do
+        if [ -f "$file" ]; then
+            git add "$file"
+        fi
+    done
+
+    echo "✅ .NET formatting passed"
+else
+    echo "   No .cs files staged, skipping..."
+fi
+echo ""
+
 ### SUCCESS ###
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ All pre-commit checks passed!"

@@ -1,8 +1,8 @@
+using System.Text.Json;
 using GatekeeperHQ.Domain.Entities;
 using GatekeeperHQ.Infrastructure.Data;
 using GatekeeperHQ.Infrastructure.Webhooks;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace GatekeeperHQ.Application.Services;
 

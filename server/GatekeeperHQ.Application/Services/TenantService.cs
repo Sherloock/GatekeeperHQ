@@ -136,8 +136,8 @@ public class TenantService : ITenantService
 
     private async Task SeedTenantPermissionsAsync(int tenantId)
     {
-        // Get all permission keys from constants
-        var permissionKeys = Domain.Constants.Permissions.All;
+        // Get tenant-level permission keys (not Super Admin permissions)
+        var permissionKeys = Domain.Constants.Permissions.TenantPermissions;
 
         var permissions = permissionKeys.Select(key => new Permission
         {

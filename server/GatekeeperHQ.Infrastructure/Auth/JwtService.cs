@@ -20,15 +20,21 @@ public class JwtService
         _expirationMinutes = expirationMinutes;
     }
 
-    public string GenerateToken(int userId, string email, int tenantId, IEnumerable<string> permissions)
+    public string GenerateToken(int userId, string email, int? tenantId, IEnumerable<string> permissions, bool isSuperAdmin = false)
     {
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim("tenant_id", tenantId.ToString())
+            new Claim("is_super_admin", isSuperAdmin.ToString().ToLower())
         };
+
+        // Add tenant_id only if user belongs to a tenant
+        if (tenantId.HasValue)
+        {
+            claims.Add(new Claim("tenant_id", tenantId.Value.ToString()));
+        }
 
         // Add permissions as claims
         foreach (var permission in permissions)

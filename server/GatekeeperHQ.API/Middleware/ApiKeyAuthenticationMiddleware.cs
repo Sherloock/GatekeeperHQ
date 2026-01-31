@@ -1,7 +1,7 @@
+using System.Security.Claims;
 using GatekeeperHQ.Application.Services;
 using GatekeeperHQ.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 
 namespace GatekeeperHQ.API.Middleware;
 

@@ -64,12 +64,12 @@ public static class DatabaseSeeder
             return;
         }
 
-        // Seed Permissions
+        // Seed Permissions (tenant-level permissions only)
         try
         {
             if (!await context.Permissions.AnyAsync())
             {
-                var permissions = Permissions.All.Select(key => new Permission
+                var permissions = Permissions.TenantPermissions.Select(key => new Permission
                 {
                     TenantId = defaultTenant.Id,
                     Key = key,
@@ -124,10 +124,36 @@ public static class DatabaseSeeder
             Console.WriteLine($"Warning: Could not seed roles: {ex.Message}");
         }
 
-        // Seed Admin User (password: Admin123!)
+        // Seed Super Admin User (password: SuperAdmin123!)
         try
         {
-            if (!await context.Users.AnyAsync())
+            if (!await context.Users.AnyAsync(u => u.IsSuperAdmin))
+            {
+                var superAdminUser = new User
+                {
+                    TenantId = null,  // Super Admin has no tenant
+                    Email = "superadmin@gatekeeperhq.com",
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("SuperAdmin123!"),
+                    IsActive = true,
+                    IsSuperAdmin = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                await context.Users.AddAsync(superAdminUser);
+                await context.SaveChangesAsync();
+                Console.WriteLine("Super Admin user created: superadmin@gatekeeperhq.com / SuperAdmin123!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Could not seed super admin user: {ex.Message}");
+        }
+
+        // Seed Tenant Admin User (password: Admin123!)
+        try
+        {
+            if (!await context.Users.AnyAsync(u => u.TenantId == defaultTenant.Id))
             {
                 var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin" && r.TenantId == defaultTenant.Id);
                 if (adminRole != null)
@@ -138,6 +164,7 @@ public static class DatabaseSeeder
                         Email = "admin@gatekeeperhq.com",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
                         IsActive = true,
+                        IsSuperAdmin = false,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
@@ -153,12 +180,13 @@ public static class DatabaseSeeder
 
                     await context.UserRoles.AddAsync(userRole);
                     await context.SaveChangesAsync();
+                    Console.WriteLine("Tenant Admin user created: admin@gatekeeperhq.com / Admin123!");
                 }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Warning: Could not seed users: {ex.Message}");
+            Console.WriteLine($"Warning: Could not seed tenant admin user: {ex.Message}");
         }
     }
 
@@ -173,8 +201,14 @@ public static class DatabaseSeeder
             Permissions.RolesView => "View roles list and details",
             Permissions.RolesManage => "Create, edit, and delete roles",
             Permissions.PermissionsView => "View available permissions",
+            Permissions.PermissionsCreate => "Create custom permissions",
+            Permissions.PermissionsManage => "Edit and delete permissions",
             Permissions.DashboardAccess => "Access dashboard",
             Permissions.SettingsAccess => "Access settings",
+            Permissions.TenantsView => "View all tenants",
+            Permissions.TenantsCreate => "Create new tenants",
+            Permissions.TenantsManage => "Edit and delete tenants",
+            Permissions.InvitationsManage => "Create and revoke invitations",
             _ => $"Permission: {key}"
         };
     }

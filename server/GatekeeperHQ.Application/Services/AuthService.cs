@@ -1,3 +1,4 @@
+using GatekeeperHQ.Domain.Constants;
 using GatekeeperHQ.Domain.Entities;
 using GatekeeperHQ.Infrastructure.Auth;
 using GatekeeperHQ.Infrastructure.Data;
@@ -28,6 +29,45 @@ public class AuthService : IAuthService
 
     public async Task<AuthResult?> LoginAsync(string email, string password)
     {
+        // First, check if this is a Super Admin login (no tenant context needed)
+        var superAdmin = await _context.Users
+            .FirstOrDefaultAsync(u => u.Email == email && u.IsSuperAdmin && u.IsActive);
+
+        if (superAdmin != null)
+        {
+            if (!BCrypt.Net.BCrypt.Verify(password, superAdmin.PasswordHash))
+                return null;
+
+            // Super Admin gets all permissions
+            var allPermissions = Permissions.All.ToList();
+
+            var token = _jwtService.GenerateToken(superAdmin.Id, superAdmin.Email, null, allPermissions, isSuperAdmin: true);
+            var refreshToken = GenerateRefreshToken();
+
+            var refreshTokenEntity = new RefreshToken
+            {
+                UserId = superAdmin.Id,
+                TenantId = null,
+                Token = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.RefreshTokens.Add(refreshTokenEntity);
+            await _context.SaveChangesAsync();
+
+            return new AuthResult
+            {
+                Token = token,
+                RefreshToken = refreshToken,
+                UserId = superAdmin.Id,
+                Email = superAdmin.Email,
+                Permissions = allPermissions,
+                IsSuperAdmin = true
+            };
+        }
+
+        // Regular tenant user login - requires tenant context
         if (!_tenantContext.TenantId.HasValue)
         {
             return null;
@@ -52,34 +92,52 @@ public class AuthService : IAuthService
             .Distinct()
             .ToList();
 
-        var token = _jwtService.GenerateToken(user.Id, user.Email, user.TenantId, permissions);
-        var refreshToken = GenerateRefreshToken();
+        var userToken = _jwtService.GenerateToken(user.Id, user.Email, user.TenantId, permissions);
+        var userRefreshToken = GenerateRefreshToken();
 
-        // Store refresh token
-        var refreshTokenEntity = new Domain.Entities.RefreshToken
+        var userRefreshTokenEntity = new RefreshToken
         {
             UserId = user.Id,
             TenantId = user.TenantId,
-            Token = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddDays(7), // 7 days expiry
+            Token = userRefreshToken,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.RefreshTokens.Add(refreshTokenEntity);
+        _context.RefreshTokens.Add(userRefreshTokenEntity);
         await _context.SaveChangesAsync();
 
         return new AuthResult
         {
-            Token = token,
-            RefreshToken = refreshToken,
+            Token = userToken,
+            RefreshToken = userRefreshToken,
             UserId = user.Id,
             Email = user.Email,
-            Permissions = permissions
+            Permissions = permissions,
+            IsSuperAdmin = false
         };
     }
 
     public async Task<UserWithPermissions?> GetUserWithPermissionsAsync(int userId)
     {
+        // First check if this is a Super Admin
+        var superAdmin = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsSuperAdmin && u.IsActive);
+
+        if (superAdmin != null)
+        {
+            return new UserWithPermissions
+            {
+                Id = superAdmin.Id,
+                Email = superAdmin.Email,
+                IsActive = superAdmin.IsActive,
+                IsSuperAdmin = true,
+                Roles = new List<string> { "Super Admin" },
+                Permissions = Permissions.All.ToList()
+            };
+        }
+
+        // Regular tenant user
         if (!_tenantContext.TenantId.HasValue)
         {
             return null;
@@ -110,6 +168,7 @@ public class AuthService : IAuthService
             Id = user.Id,
             Email = user.Email,
             IsActive = user.IsActive,
+            IsSuperAdmin = false,
             Roles = roles,
             Permissions = permissions
         };
@@ -117,11 +176,7 @@ public class AuthService : IAuthService
 
     public async Task<AuthResult?> RefreshTokenAsync(string refreshToken)
     {
-        if (!_tenantContext.TenantId.HasValue)
-        {
-            return null;
-        }
-
+        // Find refresh token - could be Super Admin or tenant user
         var tokenEntity = await _context.RefreshTokens
             .Include(rt => rt.User)
                 .ThenInclude(u => u.UserRoles)
@@ -129,7 +184,6 @@ public class AuthService : IAuthService
                         .ThenInclude(r => r.RolePermissions)
                             .ThenInclude(rp => rp.Permission)
             .FirstOrDefaultAsync(rt => rt.Token == refreshToken
-                && rt.TenantId == _tenantContext.TenantId.Value
                 && !rt.IsRevoked
                 && rt.ExpiresAt > DateTime.UtcNow);
 
@@ -138,21 +192,41 @@ public class AuthService : IAuthService
             return null;
         }
 
+        // For tenant users, verify tenant context matches
+        if (!tokenEntity.User.IsSuperAdmin)
+        {
+            if (!_tenantContext.TenantId.HasValue || tokenEntity.TenantId != _tenantContext.TenantId.Value)
+            {
+                return null;
+            }
+        }
+
         // Revoke old refresh token
         tokenEntity.IsRevoked = true;
 
-        // Generate new tokens
-        var permissions = tokenEntity.User.UserRoles
-            .SelectMany(ur => ur.Role.RolePermissions)
-            .Select(rp => rp.Permission.Key)
-            .Distinct()
-            .ToList();
+        List<string> permissions;
+        if (tokenEntity.User.IsSuperAdmin)
+        {
+            permissions = Permissions.All.ToList();
+        }
+        else
+        {
+            permissions = tokenEntity.User.UserRoles
+                .SelectMany(ur => ur.Role.RolePermissions)
+                .Select(rp => rp.Permission.Key)
+                .Distinct()
+                .ToList();
+        }
 
-        var newToken = _jwtService.GenerateToken(tokenEntity.User.Id, tokenEntity.User.Email, tokenEntity.User.TenantId, permissions);
+        var newToken = _jwtService.GenerateToken(
+            tokenEntity.User.Id,
+            tokenEntity.User.Email,
+            tokenEntity.User.TenantId,
+            permissions,
+            tokenEntity.User.IsSuperAdmin);
         var newRefreshToken = GenerateRefreshToken();
 
-        // Store new refresh token
-        var newRefreshTokenEntity = new Domain.Entities.RefreshToken
+        var newRefreshTokenEntity = new RefreshToken
         {
             UserId = tokenEntity.User.Id,
             TenantId = tokenEntity.User.TenantId,
@@ -170,25 +244,29 @@ public class AuthService : IAuthService
             RefreshToken = newRefreshToken,
             UserId = tokenEntity.User.Id,
             Email = tokenEntity.User.Email,
-            Permissions = permissions
+            Permissions = permissions,
+            IsSuperAdmin = tokenEntity.User.IsSuperAdmin
         };
     }
 
     public async Task<bool> RevokeRefreshTokenAsync(string refreshToken)
     {
-        if (!_tenantContext.TenantId.HasValue)
-        {
-            return false;
-        }
-
         var tokenEntity = await _context.RefreshTokens
-            .FirstOrDefaultAsync(rt => rt.Token == refreshToken
-                && rt.TenantId == _tenantContext.TenantId.Value
-                && !rt.IsRevoked);
+            .Include(rt => rt.User)
+            .FirstOrDefaultAsync(rt => rt.Token == refreshToken && !rt.IsRevoked);
 
         if (tokenEntity == null)
         {
             return false;
+        }
+
+        // For tenant users, verify tenant context matches
+        if (tokenEntity.User != null && !tokenEntity.User.IsSuperAdmin)
+        {
+            if (!_tenantContext.TenantId.HasValue || tokenEntity.TenantId != _tenantContext.TenantId.Value)
+            {
+                return false;
+            }
         }
 
         tokenEntity.IsRevoked = true;
@@ -209,6 +287,7 @@ public class AuthResult
     public int UserId { get; set; }
     public string Email { get; set; } = string.Empty;
     public List<string> Permissions { get; set; } = new();
+    public bool IsSuperAdmin { get; set; } = false;
 }
 
 public class UserWithPermissions
@@ -216,6 +295,7 @@ public class UserWithPermissions
     public int Id { get; set; }
     public string Email { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public bool IsSuperAdmin { get; set; } = false;
     public List<string> Roles { get; set; } = new();
     public List<string> Permissions { get; set; } = new();
 }

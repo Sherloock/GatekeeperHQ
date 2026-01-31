@@ -1,128 +1,162 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { usersApi } from '@/lib/api/users';
-import { rolesApi } from '@/lib/api/roles';
-import { useAuth } from '@/lib/auth/useAuth';
 import { canAccess } from '@/lib/auth/canAccess';
-import { useState } from 'react';
+import { useAuth } from '@/lib/auth/useAuth';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Building2, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function UsersPage() {
-  const { user: currentUser } = useAuth();
-  const queryClient = useQueryClient();
-  const [editingUser, setEditingUser] = useState<number | null>(null);
+	const { user: currentUser, selectedTenantId } = useAuth();
+	const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: usersApi.getAll,
-    enabled: canAccess(currentUser, 'users.view'),
-  });
+	// Super admins need to select a tenant to view tenant-scoped resources
+	const needsTenantSelection = currentUser?.isSuperAdmin && !selectedTenantId;
 
-  const { data: roles } = useQuery({
-    queryKey: ['roles'],
-    queryFn: rolesApi.getAll,
-  });
+	const { data: users, isLoading } = useQuery({
+		queryKey: ['users', selectedTenantId],
+		queryFn: usersApi.getAll,
+		enabled: canAccess(currentUser, 'users.view') && !needsTenantSelection,
+	});
 
-  const deleteMutation = useMutation({
-    mutationFn: usersApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-    },
-  });
+	const deleteUserMutation = useMutation({
+		mutationFn: usersApi.delete,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['users'] });
+		},
+	});
 
-  if (!currentUser || !canAccess(currentUser, 'users.view')) {
-    return (
-      <div className="text-center py-12">
-        <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-        <p className="mt-4 text-gray-600">You don't have permission to view users.</p>
-      </div>
-    );
-  }
+	const handleDeleteUser = (userId: number, userEmail: string) => {
+		if (confirm(`Are you sure you want to delete "${userEmail}"?`)) {
+			deleteUserMutation.mutate(userId);
+		}
+	};
 
-  if (isLoading) {
-    return <div className="text-center py-12">Loading users...</div>;
-  }
+	if (!currentUser || !canAccess(currentUser, 'users.view')) {
+		return (
+			<div className="py-12 text-center">
+				<h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
+				<p className="mt-4 text-muted-foreground">You don&apos;t have permission to view users.</p>
+			</div>
+		);
+	}
 
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-        {canAccess(currentUser, 'users.create') && (
-          <Link
-            href="/users/new"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Create User
-          </Link>
-        )}
-      </div>
+	if (needsTenantSelection) {
+		return (
+			<div className="py-12 text-center">
+				<Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
+				<h1 className="mt-4 text-2xl font-bold">Select a Tenant</h1>
+				<p className="mt-2 text-muted-foreground">
+					Please select a tenant from the header to view and manage users.
+				</p>
+			</div>
+		);
+	}
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Email
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Roles
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {users?.map((user) => (
-              <tr key={user.id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {user.email}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      user.isActive
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {user.roles.join(', ') || 'No roles'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                  {canAccess(currentUser, 'users.edit') && (
-                    <Link
-                      href={`/users/${user.id}/edit`}
-                      className="text-blue-600 hover:text-blue-900"
-                    >
-                      Edit
-                    </Link>
-                  )}
-                  {canAccess(currentUser, 'users.delete') && (
-                    <button
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this user?')) {
-                          deleteMutation.mutate(user.id);
-                        }
-                      }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+	return (
+		<div className="space-y-6">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h1 className="text-2xl font-bold tracking-tight">Users</h1>
+					<p className="text-muted-foreground">Manage user accounts and their roles</p>
+				</div>
+				{canAccess(currentUser, 'users.create') && (
+					<Button asChild>
+						<Link href="/users/new">
+							<Plus className="mr-2 h-4 w-4" />
+							Create User
+						</Link>
+					</Button>
+				)}
+			</div>
+
+			<Card>
+				<CardHeader>
+					<CardTitle className="text-lg">All Users</CardTitle>
+					<CardDescription>
+						{isLoading ? 'Loading...' : `${users?.length || 0} users total`}
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					{isLoading ? (
+						<div className="space-y-4">
+							{[...Array(3)].map((_, i) => (
+								<div key={i} className="flex items-center justify-between">
+									<div className="space-y-2">
+										<Skeleton className="h-4 w-48" />
+										<Skeleton className="h-3 w-24" />
+									</div>
+									<Skeleton className="h-8 w-20" />
+								</div>
+							))}
+						</div>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="w-full">
+								<thead>
+									<tr className="border-b text-left text-sm font-medium text-muted-foreground">
+										<th className="pb-3 pr-4">Email</th>
+										<th className="pb-3 pr-4">Status</th>
+										<th className="pb-3 pr-4">Roles</th>
+										<th className="pb-3 text-right">Actions</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y">
+									{users?.map((user) => (
+										<tr key={user.id} className="text-sm">
+											<td className="py-3 pr-4 font-medium">{user.email}</td>
+											<td className="py-3 pr-4">
+												<Badge variant={user.isActive ? 'success' : 'destructive'}>
+													{user.isActive ? 'Active' : 'Inactive'}
+												</Badge>
+											</td>
+											<td className="py-3 pr-4">
+												<div className="flex flex-wrap gap-1">
+													{user.roles.length > 0 ? (
+														user.roles.map((role) => (
+															<Badge key={role} variant="secondary">
+																{role}
+															</Badge>
+														))
+													) : (
+														<span className="text-muted-foreground">No roles</span>
+													)}
+												</div>
+											</td>
+											<td className="py-3 text-right">
+												<div className="flex items-center justify-end gap-2">
+													{canAccess(currentUser, 'users.edit') && (
+														<Button variant="ghost" size="sm" asChild>
+															<Link href={`/users/${user.id}/edit`}>
+																<Pencil className="h-4 w-4" />
+															</Link>
+														</Button>
+													)}
+													{canAccess(currentUser, 'users.delete') && (
+														<Button
+															variant="ghost"
+															size="sm"
+															onClick={() => handleDeleteUser(user.id, user.email)}
+															disabled={deleteUserMutation.isPending}
+														>
+															<Trash2 className="h-4 w-4 text-destructive" />
+														</Button>
+													)}
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</CardContent>
+			</Card>
+		</div>
+	);
 }

@@ -4,7 +4,7 @@ public class RefreshToken
 {
     public int Id { get; set; }
     public int UserId { get; set; }
-    public int TenantId { get; set; }
+    public int? TenantId { get; set; }  // Nullable for Super Admin
     public string Token { get; set; } = string.Empty;
     public DateTime ExpiresAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -12,5 +12,5 @@ public class RefreshToken
 
     // Navigation properties
     public User User { get; set; } = null!;
-    public Tenant Tenant { get; set; } = null!;
+    public Tenant? Tenant { get; set; }
 }
