@@ -1,0 +1,183 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-tests.yml'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        working-directory: server
+        run: dotnet restore
+
+      - name: Build
+        working-directory: server
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Unit Tests
+        working-directory: server
+        run: |
+          dotnet test --no-build --configuration Release \
+            --filter "Category=Unit" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx;LogFileName=unit-tests.trx"
+
+      - name: Upload Unit Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-results
+          path: server/TestResults
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: coverage-unit
+          path: server/TestResults/**/coverage.cobertura.xml
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: gatekeeperhq_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        working-directory: server
+        run: dotnet restore
+
+      - name: Build
+        working-directory: server
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Integration Tests
+        working-directory: server
+        run: |
+          dotnet test --no-build --configuration Release \
+            --filter "Category=Integration" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./TestResults \
+            --logger "trx;LogFileName=integration-tests.trx"
+        env:
+          # Testcontainers will use Docker-in-Docker
+          TESTCONTAINERS_RYUK_DISABLED: true
+
+      - name: Upload Integration Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: server/TestResults
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: coverage-integration
+          path: server/TestResults/**/coverage.cobertura.xml
+
+  code-coverage:
+    name: Code Coverage Report
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Unit Test Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage/unit
+
+      - name: Download Integration Test Coverage
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-integration
+          path: coverage/integration
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Generate Coverage Report
+        run: |
+          reportgenerator \
+            -reports:"coverage/**/*.xml" \
+            -targetdir:"coverage/report" \
+            -reporttypes:"Cobertura;MarkdownSummary"
+
+      - name: Add Coverage to PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: coverage/report/Summary.md
+          header: coverage
+
+  all-tests-pass:
+    name: All Tests Pass
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          if [[ "${{ needs.unit-tests.result }}" == "success" && "${{ needs.integration-tests.result }}" == "success" ]]; then
+            echo "All tests passed!"
+            exit 0
+          else
+            echo "Some tests failed!"
+            exit 1
+          fi
