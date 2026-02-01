@@ -116,6 +116,76 @@ public class TenantService : ITenantService
 		if (tenant == null)
 			return false;
 
+		// Delete related entities in correct order to avoid FK violations
+		// 1. Delete UserRoles for users in this tenant
+		var userIds = await _context.Users
+			.Where(u => u.TenantId == id)
+			.Select(u => u.Id)
+			.ToListAsync();
+		if (userIds.Count > 0)
+		{
+			var userRoles = await _context.UserRoles
+				.Where(ur => userIds.Contains(ur.UserId))
+				.ToListAsync();
+			_context.UserRoles.RemoveRange(userRoles);
+		}
+
+		// 2. Delete RefreshTokens for users in this tenant
+		var refreshTokens = await _context.RefreshTokens
+			.Where(rt => rt.TenantId == id)
+			.ToListAsync();
+		_context.RefreshTokens.RemoveRange(refreshTokens);
+
+		// 3. Delete RolePermissions for roles in this tenant
+		var roleIds = await _context.Roles
+			.Where(r => r.TenantId == id)
+			.Select(r => r.Id)
+			.ToListAsync();
+		if (roleIds.Count > 0)
+		{
+			var rolePermissions = await _context.RolePermissions
+				.Where(rp => roleIds.Contains(rp.RoleId))
+				.ToListAsync();
+			_context.RolePermissions.RemoveRange(rolePermissions);
+		}
+
+		// 4. Delete Invitations for this tenant
+		var invitations = await _context.Invitations
+			.Where(i => i.TenantId == id)
+			.ToListAsync();
+		_context.Invitations.RemoveRange(invitations);
+
+		// 5. Delete Webhooks for this tenant
+		var webhooks = await _context.Webhooks
+			.Where(w => w.TenantId == id)
+			.ToListAsync();
+		_context.Webhooks.RemoveRange(webhooks);
+
+		// 6. Delete ApiKeys for this tenant
+		var apiKeys = await _context.ApiKeys
+			.Where(a => a.TenantId == id)
+			.ToListAsync();
+		_context.ApiKeys.RemoveRange(apiKeys);
+
+		// 7. Delete Users in this tenant
+		var users = await _context.Users
+			.Where(u => u.TenantId == id)
+			.ToListAsync();
+		_context.Users.RemoveRange(users);
+
+		// 8. Delete Roles in this tenant
+		var roles = await _context.Roles
+			.Where(r => r.TenantId == id)
+			.ToListAsync();
+		_context.Roles.RemoveRange(roles);
+
+		// 9. Delete Permissions in this tenant
+		var permissions = await _context.Permissions
+			.Where(p => p.TenantId == id)
+			.ToListAsync();
+		_context.Permissions.RemoveRange(permissions);
+
+		// 10. Finally delete the tenant
 		_context.Tenants.Remove(tenant);
 		await _context.SaveChangesAsync();
 		return true;

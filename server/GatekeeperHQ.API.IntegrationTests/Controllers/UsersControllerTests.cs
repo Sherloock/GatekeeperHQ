@@ -114,7 +114,7 @@ public class UsersControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/users", createRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeCreated();
 		var result = await response.ReadAsJsonAsync<UserDto>();
 		result.Should().NotBeNull();
 		result!.Email.Should().Be("newuser@testtenant.com");
@@ -141,7 +141,7 @@ public class UsersControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/users", createRequest);
 
 		// Assert
-		response.ShouldBeBadRequest();
+		response.ShouldBeConflict();
 	}
 
 	[Fact]

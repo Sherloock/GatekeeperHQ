@@ -81,7 +81,7 @@ public class PermissionsControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/permissions", createRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeCreated();
 		var result = await response.ReadAsJsonAsync<PermissionDto>();
 		result.Should().NotBeNull();
 		result!.Key.Should().Be("custom.permission");
@@ -185,7 +185,7 @@ public class PermissionsControllerTests : IntegrationTestBase
 		var response = await Client.DeleteAsync($"/api/v1/permissions/{firstPermission.Id}");
 
 		// Assert
-		response.ShouldBeBadRequest();
+		response.ShouldBeConflict();
 	}
 
 	private class PermissionDto

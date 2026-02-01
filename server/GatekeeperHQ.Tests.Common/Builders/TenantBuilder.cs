@@ -11,7 +11,6 @@ public class TenantBuilder
 	private string? _apiKey;
 	private bool _isActive = true;
 	private DateTime? _createdAt;
-	private DateTime? _updatedAt;
 
 	public TenantBuilder WithId(int id)
 	{
@@ -53,7 +52,7 @@ public class TenantBuilder
 			ApiKey = _apiKey ?? Guid.NewGuid().ToString("N"),
 			IsActive = _isActive,
 			CreatedAt = _createdAt ?? now,
-			UpdatedAt = _updatedAt ?? now
+			UpdatedAt = now
 		};
 	}
 

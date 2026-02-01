@@ -14,8 +14,6 @@ public class WebhookBuilder
 	private string? _secret;
 	private List<string> _events = new();
 	private bool _isActive = true;
-	private DateTime? _createdAt;
-	private DateTime? _updatedAt;
 
 	public WebhookBuilder WithId(int id)
 	{
@@ -72,8 +70,8 @@ public class WebhookBuilder
 			Secret = _secret ?? Guid.NewGuid().ToString("N"),
 			Events = JsonSerializer.Serialize(_events),
 			IsActive = _isActive,
-			CreatedAt = _createdAt ?? now,
-			UpdatedAt = _updatedAt ?? now
+			CreatedAt = now,
+			UpdatedAt = now
 		};
 	}
 

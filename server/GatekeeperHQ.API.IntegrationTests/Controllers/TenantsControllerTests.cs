@@ -79,7 +79,7 @@ public class TenantsControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/tenants", createRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeCreated();
 		var result = await response.ReadAsJsonAsync<TenantDto>();
 		result.Should().NotBeNull();
 		result!.Name.Should().Be("New Tenant");
@@ -104,7 +104,7 @@ public class TenantsControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/tenants", createRequest);
 
 		// Assert
-		response.ShouldBeBadRequest();
+		response.ShouldBeConflict();
 	}
 
 	[Fact]

@@ -82,7 +82,7 @@ public class RolesControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/roles", createRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeCreated();
 		var result = await response.ReadAsJsonAsync<RoleDto>();
 		result.Should().NotBeNull();
 		result!.Name.Should().Be("Editor");
@@ -108,7 +108,7 @@ public class RolesControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/roles", createRequest);
 
 		// Assert
-		response.ShouldBeBadRequest();
+		response.ShouldBeConflict();
 	}
 
 	[Fact]
@@ -210,7 +210,7 @@ public class RolesControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync($"/api/v1/roles/{createdRole!.Id}/permissions", addPermRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeNoContent();
 
 		// Verify permission was added
 		var getPermsResponse = await Client.GetAsync($"/api/v1/roles/{createdRole.Id}/permissions");

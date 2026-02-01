@@ -273,7 +273,7 @@ public class AuthControllerTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/auth/revoke", revokeRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeNoContent();
 
 		// Verify token is revoked by trying to refresh
 		ClearAuthentication();

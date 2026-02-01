@@ -30,15 +30,51 @@ public class TenantResolutionMiddleware
 			return;
 		}
 
-		// If tenant is already set (e.g., by ApiKeyAuthenticationMiddleware), skip resolution
+		// If tenant is already set, validate it for authenticated users
 		if (tenantContext.TenantId.HasValue)
 		{
+			// For authenticated non-super-admin users, ensure their tenant context matches their JWT
+			// This prevents X-Tenant-ID header spoofing set before authentication
+			if (context.User.Identity?.IsAuthenticated == true)
+			{
+				var isSuperAdminCheck = context.User.FindFirst("is_super_admin")?.Value == "true";
+				if (!isSuperAdminCheck)
+				{
+					var jwtTenantIdClaim = context.User.FindFirst("tenant_id");
+					if (jwtTenantIdClaim != null && int.TryParse(jwtTenantIdClaim.Value, out var jwtTenant))
+					{
+						// Non-super-admin user must use their JWT tenant
+						if (tenantContext.TenantId.Value != jwtTenant)
+						{
+							_logger.LogWarning(
+								"Tenant context mismatch: Context had {ContextTenantId} but JWT has {JwtTenantId}. Correcting to JWT tenant.",
+								tenantContext.TenantId.Value, jwtTenant);
+							tenantContext.SetTenant(jwtTenant);
+						}
+					}
+				}
+			}
 			await _next(context);
 			return;
 		}
 
 		// Try to resolve tenant from multiple sources (priority order)
 		int? tenantId = null;
+
+		// Check if user is authenticated and if they're a super admin
+		var isAuthenticated = context.User.Identity?.IsAuthenticated == true;
+		var isSuperAdmin = isAuthenticated && context.User.FindFirst("is_super_admin")?.Value == "true";
+		int? jwtTenantId = null;
+
+		// Get tenant ID from JWT claim if authenticated
+		if (isAuthenticated)
+		{
+			var tenantIdClaim = context.User.FindFirst("tenant_id");
+			if (tenantIdClaim != null && int.TryParse(tenantIdClaim.Value, out var claimTenantId))
+			{
+				jwtTenantId = claimTenantId;
+			}
+		}
 
 		// 1. Try from subdomain (e.g., tenant1.gatekeeperhq.com)
 		var host = context.Request.Host.Host;
@@ -56,17 +92,41 @@ public class TenantResolutionMiddleware
 			}
 		}
 
-		// 2. Try from X-Tenant-Id header (for super admin tenant selection)
+		// 2. Try from X-Tenant-Id header (for super admin tenant selection ONLY)
 		if (tenantId == null && context.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantIdHeader))
 		{
 			if (int.TryParse(tenantIdHeader.ToString(), out var headerTenantId))
 			{
-				// Verify the tenant exists and is active
-				var tenantExists = await dbContext.Tenants
-					.AnyAsync(t => t.Id == headerTenantId && t.IsActive);
-				if (tenantExists)
+				// SECURITY: Only allow X-Tenant-Id header override for super admins
+				// Non-super-admin users must use their JWT tenant claim
+				if (isAuthenticated)
 				{
-					tenantId = headerTenantId;
+					if (isSuperAdmin)
+					{
+						// Super admins can switch to any tenant
+						var tenantExists = await dbContext.Tenants
+							.AnyAsync(t => t.Id == headerTenantId && t.IsActive);
+						if (tenantExists)
+						{
+							tenantId = headerTenantId;
+						}
+					}
+					else if (jwtTenantId.HasValue && jwtTenantId.Value == headerTenantId)
+					{
+						// Non-super-admin: Header must match JWT claim
+						tenantId = headerTenantId;
+					}
+					// If header doesn't match JWT claim for non-super-admin, ignore the header
+				}
+				else
+				{
+					// Not authenticated yet - allow header for login flow
+					var tenantExists = await dbContext.Tenants
+						.AnyAsync(t => t.Id == headerTenantId && t.IsActive);
+					if (tenantExists)
+					{
+						tenantId = headerTenantId;
+					}
 				}
 			}
 		}
@@ -99,14 +159,10 @@ public class TenantResolutionMiddleware
 		}
 
 		// 5. Try from JWT claim (for authenticated users)
-		// This only works after UseAuthentication() has run
-		if (tenantId == null && context.User.Identity?.IsAuthenticated == true)
+		// Use the cached JWT tenant ID
+		if (tenantId == null && jwtTenantId.HasValue)
 		{
-			var tenantIdClaim = context.User.FindFirst("tenant_id");
-			if (tenantIdClaim != null && int.TryParse(tenantIdClaim.Value, out var claimTenantId))
-			{
-				tenantId = claimTenantId;
-			}
+			tenantId = jwtTenantId.Value;
 		}
 
 		// Set tenant context if found

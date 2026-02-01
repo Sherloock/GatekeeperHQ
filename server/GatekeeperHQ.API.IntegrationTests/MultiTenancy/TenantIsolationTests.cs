@@ -66,7 +66,7 @@ public class TenantIsolationTests : IntegrationTestBase
 		
 		// Should only contain users from first tenant
 		users!.All(u => u.Email.Contains("testtenant")).Should().BeTrue();
-		users.Any(u => u.Email.Contains("secondtenant")).Should().BeFalse();
+		users!.Any(u => u.Email.Contains("secondtenant")).Should().BeFalse();
 	}
 
 	[Fact]

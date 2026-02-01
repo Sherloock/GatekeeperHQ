@@ -170,7 +170,7 @@ public class AuthorizationTests : IntegrationTestBase
 		var response = await Client.PostAsJsonAsync("/api/v1/tenants", createRequest);
 
 		// Assert
-		response.ShouldBeOk();
+		response.ShouldBeCreated();
 	}
 
 	#endregion

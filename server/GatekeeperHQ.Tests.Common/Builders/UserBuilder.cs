@@ -14,7 +14,6 @@ public class UserBuilder
 	private bool _isActive = true;
 	private bool _isSuperAdmin;
 	private DateTime? _createdAt;
-	private DateTime? _updatedAt;
 	private List<UserRole> _userRoles = new();
 
 	public UserBuilder WithId(int id)
@@ -93,7 +92,7 @@ public class UserBuilder
 			IsActive = _isActive,
 			IsSuperAdmin = _isSuperAdmin,
 			CreatedAt = _createdAt ?? now,
-			UpdatedAt = _updatedAt ?? now
+			UpdatedAt = now
 		};
 
 		foreach (var userRole in _userRoles)

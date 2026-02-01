@@ -17,7 +17,6 @@ public class InvitationBuilder
 	private DateTime? _acceptedAt;
 	private int _createdByUserId;
 	private User? _createdBy;
-	private DateTime? _createdAt;
 
 	public InvitationBuilder WithId(int id)
 	{
@@ -103,7 +102,7 @@ public class InvitationBuilder
 			AcceptedAt = _acceptedAt,
 			CreatedByUserId = _createdByUserId,
 			CreatedBy = _createdBy!,
-			CreatedAt = _createdAt ?? DateTime.UtcNow
+			CreatedAt = DateTime.UtcNow
 		};
 	}
 

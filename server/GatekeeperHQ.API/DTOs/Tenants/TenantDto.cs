@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace GatekeeperHQ.API.DTOs.Tenants;
 
 public class TenantDto
@@ -12,6 +14,10 @@ public class TenantDto
 
 public class CreateTenantRequest
 {
+	[Required(ErrorMessage = "Name is required")]
+	[MinLength(1, ErrorMessage = "Name cannot be empty")]
+	[MaxLength(200, ErrorMessage = "Name must be less than 200 characters")]
+	[RegularExpression(@"^\S.*\S$|^\S$", ErrorMessage = "Name cannot be only whitespace")]
 	public string Name { get; set; } = string.Empty;
 	public bool IsActive { get; set; } = true;
 }

@@ -18,8 +18,6 @@ public class ApiKeyBuilder
 	private List<string> _permissions = new();
 	private bool _isActive = true;
 	private DateTime? _expiresAt;
-	private DateTime? _createdAt;
-	private DateTime? _updatedAt;
 	private DateTime? _lastUsedAt;
 
 	public ApiKeyBuilder WithId(int id)
@@ -100,8 +98,8 @@ public class ApiKeyBuilder
 			Permissions = JsonSerializer.Serialize(_permissions),
 			IsActive = _isActive,
 			ExpiresAt = _expiresAt,
-			CreatedAt = _createdAt ?? now,
-			UpdatedAt = _updatedAt ?? now,
+			CreatedAt = now,
+			UpdatedAt = now,
 			LastUsedAt = _lastUsedAt
 		};
 	}

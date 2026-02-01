@@ -4,8 +4,10 @@ namespace GatekeeperHQ.API.DTOs.Users;
 
 public class CreateUserRequest
 {
-	[Required]
-	[EmailAddress]
+	[Required(ErrorMessage = "Email is required")]
+	[MaxLength(254, ErrorMessage = "Email must be less than 254 characters")]
+	[RegularExpression(@"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+		ErrorMessage = "Email must be a valid email address")]
 	public string Email { get; set; } = string.Empty;
 
 	[Required]

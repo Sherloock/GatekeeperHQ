@@ -11,7 +11,6 @@ public class RefreshTokenBuilder
 	private Tenant? _tenant;
 	private string? _token;
 	private DateTime? _expiresAt;
-	private DateTime? _createdAt;
 	private bool _isRevoked;
 
 	public RefreshTokenBuilder WithId(int id)
@@ -81,7 +80,7 @@ public class RefreshTokenBuilder
 			Tenant = _tenant,
 			Token = _token ?? Convert.ToBase64String(Guid.NewGuid().ToByteArray()),
 			ExpiresAt = _expiresAt ?? DateTime.UtcNow.AddDays(7),
-			CreatedAt = _createdAt ?? DateTime.UtcNow,
+			CreatedAt = DateTime.UtcNow,
 			IsRevoked = _isRevoked
 		};
 	}
