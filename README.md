@@ -183,4 +183,4 @@ dotnet ef database update --project GatekeeperHQ.Infrastructure --startup-projec
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Copyright (c) 2026 Bálint Deák. All rights reserved. See [LICENSE](LICENSE).

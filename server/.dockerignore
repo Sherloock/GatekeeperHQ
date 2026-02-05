@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vs
+.vscode
+.idea
+*.user
+*.suo
+
+# Build outputs
+**/bin
+**/obj
+**/out
+
+# Test projects (not needed for production)
+**/*.Tests.csproj
+**/GatekeeperHQ.Tests.Common
+**/GatekeeperHQ.Domain.Tests
+**/GatekeeperHQ.Application.Tests
+**/GatekeeperHQ.API.IntegrationTests
+
+# Scripts (development only)
+scripts/
+
+# Documentation
+*.md
+!README.md
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Railway config
+railway.toml
+
+# Misc
+*.log
+*.tmp
